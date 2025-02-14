@@ -11,7 +11,7 @@ void setup()
   scanForAdress();
 #endif
   Serial.println("bitch ass");
-  void initMPU6050();
+  initMPU6050();
 }
 
 void loop()
