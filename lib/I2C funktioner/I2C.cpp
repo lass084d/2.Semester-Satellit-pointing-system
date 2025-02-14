@@ -36,20 +36,55 @@ Wire.endTransmission(false);
 Wire.requestFrom(0x68, 6, true); // Request 6 bytes (acceleration data)
 
  // Reading the values
- int16_t ax = Wire.read() << 8 | Wire.read();
- int16_t ay = Wire.read() << 8 | Wire.read();
- int16_t az = Wire.read() << 8 | Wire.read();
+ int16_t ax_raw = Wire.read() << 8 | Wire.read();
+ int16_t ay_raw = Wire.read() << 8 | Wire.read();
+ int16_t az_raw = Wire.read() << 8 | Wire.read();
 
+#ifndef CONVERT
  // Print acceleration values
- Serial.print("Accel X: ");
- Serial.print(ax);
+ Serial.print("raw Accel X: ");
+ Serial.print(ax_raw);
  Serial.print("\tY: ");
- Serial.print(ay);
+ Serial.print(ay_raw);
  Serial.print("\tZ: ");
- Serial.println(az);
+ Serial.println(az_raw);
 
-AccelData->ax = ax;
-AccelData->ay = ay;
-AccelData->az = az;
+#endif
 
+AccelData->ax_raw = ax_raw;
+AccelData->ay_raw = ay_raw;
+AccelData->az_raw = az_raw;
+
+#ifdef CONVERT
+  // Convert the raw values to g
+  float accelX = ax_raw / 16384.0;
+  float accelY = ay_raw / 16384.0;
+  float accelZ = az_raw / 16384.0;
+
+  // the g into m/s^2
+  accelX = accelX * 9.81;
+  accelY = accelY * 9.81;
+  accelZ = accelZ * 9.81;
+
+  // Print acceleration values in g
+  Serial.print(hour());
+  Serial.print(":");
+  Serial.print(minute());
+  Serial.print(":");
+  Serial.print(second());
+  Serial.print("\tAccel X: ");
+  Serial.print(accelX);
+  Serial.print(" m/s^2");
+  Serial.print("\tY: ");
+  Serial.print(accelY);
+  Serial.print(" m/s^2");
+  Serial.print("\tZ: ");
+  Serial.print(accelZ);
+  Serial.println(" m/s^2");
+
+  AccelData->accelX = accelX;
+  AccelData->accelY = accelY;
+  AccelData->accelZ = accelZ;
+
+#endif
 }
