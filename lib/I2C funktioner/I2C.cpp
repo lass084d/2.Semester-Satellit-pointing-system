@@ -35,114 +35,36 @@ void initBMP280(struct trimming_parameters *trimming_parameters)
   Wire.write(0b00011100); // Write value to register to set T_standby to 0.5ms and iir filter 16
   Wire.endTransmission(true);
 
-  Wire.beginTransmission(BMP_280_ADDRESS);
-  Wire.write(0x88); // Starting register for altitude data
-  Wire.endTransmission(false);
-  Wire.requestFrom(BMP_280_ADDRESS, 2, true);
+  uint8_t registers[] = {0x88, 0x8E, 0x8A, 0x8C, 0x90, 0x92, 0x94, 0x96, 0x98, 0x9A, 0x9C, 0x9E};
+  int16_t *signed_trimming_values[] = {
+      &trimming_parameters->dig_T2, &trimming_parameters->dig_T3,
+      &trimming_parameters->dig_P2, &trimming_parameters->dig_P3,
+      &trimming_parameters->dig_P4, &trimming_parameters->dig_P5,
+      &trimming_parameters->dig_P6, &trimming_parameters->dig_P7,
+      &trimming_parameters->dig_P8, &trimming_parameters->dig_P9};
+  uint16_t *unsigned_trimming_values[] = {
+      &trimming_parameters->dig_T1, &trimming_parameters->dig_P1};
 
-  int var1 = Wire.read();
-  int var2 = Wire.read();
-  trimming_parameters->dig_T1 = ((uint16_t)var2 << 8) | (uint16_t)var1;
+  for (int i = 0; i < 12; i++)
+  {
+    Wire.beginTransmission(BMP_280_ADDRESS);
+    Wire.write(registers[i]); // Send the starting register for each parameter
+    Wire.endTransmission(false);
+    Wire.requestFrom(BMP_280_ADDRESS, 2, true); // Request 2 bytes
 
-  Wire.beginTransmission(BMP_280_ADDRESS);
-  Wire.write(0x8A); // Starting register for altitude data
-  Wire.endTransmission(false);
-  Wire.requestFrom(BMP_280_ADDRESS, 2, true);
+    int var1 = Wire.read();
+    int var2 = Wire.read();
 
-  var1 = Wire.read();
-  var2 = Wire.read();
-  trimming_parameters->dig_T2 = (var2 << 8) | var1;
-
-  Wire.beginTransmission(BMP_280_ADDRESS);
-  Wire.write(0x8C); // Starting register for altitude data
-  Wire.endTransmission(false);
-  Wire.requestFrom(BMP_280_ADDRESS, 2, true);
-
-  var1 = Wire.read();
-  var2 = Wire.read();
-  trimming_parameters->dig_T3 = (var2 << 8) | var1;
-
-  Wire.beginTransmission(BMP_280_ADDRESS);
-  Wire.write(0x8E); // Starting register for altitude data
-  Wire.endTransmission(false);
-  Wire.requestFrom(BMP_280_ADDRESS, 2, true);
-
-  var1 = Wire.read();
-  var2 = Wire.read();
-  trimming_parameters->dig_P1 = (var2 << 8) | var1;
-
-  Wire.beginTransmission(BMP_280_ADDRESS);
-  Wire.write(0x90); // Starting register for altitude data
-  Wire.endTransmission(false);
-  Wire.requestFrom(BMP_280_ADDRESS, 2, true);
-
-  var1 = Wire.read();
-  var2 = Wire.read();
-  trimming_parameters->dig_P2 = (var2 << 8) | var1;
-
-  Wire.beginTransmission(BMP_280_ADDRESS);
-  Wire.write(0x92); // Starting register for altitude data
-  Wire.endTransmission(false);
-  Wire.requestFrom(BMP_280_ADDRESS, 2, true);
-
-  var1 = Wire.read();
-  var2 = Wire.read();
-  trimming_parameters->dig_P3 = (var2 << 8) | var1;
-
-  Wire.beginTransmission(BMP_280_ADDRESS);
-  Wire.write(0x94); // Starting register for altitude data
-  Wire.endTransmission(false);
-  Wire.requestFrom(BMP_280_ADDRESS, 2, true);
-
-  var1 = Wire.read();
-  var2 = Wire.read();
-  trimming_parameters->dig_P4 = (var2 << 8) | var1;
-
-  Wire.beginTransmission(BMP_280_ADDRESS);
-  Wire.write(0x96); // Starting register for altitude data
-  Wire.endTransmission(false);
-  Wire.requestFrom(BMP_280_ADDRESS, 2, true);
-
-  var1 = Wire.read();
-  var2 = Wire.read();
-  trimming_parameters->dig_P5 = (var2 << 8) | var1;
-
-  Wire.beginTransmission(BMP_280_ADDRESS);
-  Wire.write(0x98); // Starting register for altitude data
-  Wire.endTransmission(false);
-  Wire.requestFrom(BMP_280_ADDRESS, 2, true);
-
-  var1 = Wire.read();
-  var2 = Wire.read();
-  trimming_parameters->dig_P6 = (var2 << 8) | var1;
-
-  Wire.beginTransmission(BMP_280_ADDRESS);
-  Wire.write(0x9A); // Starting register for altitude data
-  Wire.endTransmission(false);
-  Wire.requestFrom(BMP_280_ADDRESS, 2, true);
-
-  var1 = Wire.read();
-  var2 = Wire.read();
-  trimming_parameters->dig_P7 = (var2 << 8) | var1;
-
-  Wire.beginTransmission(BMP_280_ADDRESS);
-  Wire.write(0x9C); // Starting register for altitude data
-  Wire.endTransmission(false);
-  Wire.requestFrom(BMP_280_ADDRESS, 2, true);
-
-  var1 = Wire.read();
-  var2 = Wire.read();
-
-  trimming_parameters->dig_P8 = (var2 << 8) | var1;
-
-  Wire.beginTransmission(BMP_280_ADDRESS);
-  Wire.write(0x9E); // Starting register for altitude data
-  Wire.endTransmission(false);
-  Wire.requestFrom(BMP_280_ADDRESS, 2, true);
-
-  var1 = Wire.read();
-  var2 = Wire.read();
-  trimming_parameters->dig_P9 = (var2 << 8) | var1;
+    // Combine the two bytes into one value and store it in the corresponding trimming parameter
+    if (i < 2)
+    { // For dig_T1 and dig_P1, store as unsigned
+      *unsigned_trimming_values[i] = (var2 << 8) | var1;
+    }
+    else
+    { // For other values, store as signed
+      *signed_trimming_values[i - 2] = (var2 << 8) | var1;
+    }
+  }
 }
 
 // MPU6050 initialization

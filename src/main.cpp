@@ -13,7 +13,7 @@ void setup()
 }
 
 void loop()
-{
+{  
   accData(&myAccelData);
   tempData(&myAltitudeData, &myTrimmingParameters);
   preasureData(&myAltitudeData, &myTrimmingParameters);
