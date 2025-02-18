@@ -1,24 +1,23 @@
 #include <I2C.h>
 
 struct AccelData myAccelData = {0, 0, 0};
+struct trimming_parameters myTrimmingParameters;
+struct AltitudeData myAltitudeData = {0, 0, 0};
 
 void setup()
 {
-  Wire.begin();
   Serial.begin(9600);
-
-#ifdef TEST
-  scanForAdress();
-#endif
-  Serial.println("bitch ass");
+  Wire.begin();
+  initBMP280(&myTrimmingParameters);
   initMPU6050();
 }
 
 void loop()
 {
   accData(&myAccelData);
-  delay(200);
-
-  // Wire.beginTransmission(0x40);
-  // Wire.write(0x00);
+  tempData(&myAltitudeData, &myTrimmingParameters);
+  preasureData(&myAltitudeData, &myTrimmingParameters);
+  Serial.println();
+  delay(1000);
+  
 }
