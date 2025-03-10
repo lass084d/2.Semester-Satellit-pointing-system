@@ -30,17 +30,20 @@ void setup()
              FILTER_X16,    //  IIR Filtering
              STANDBY_MS_1); // Standby time
   initMPU6050();
+  delay(1000);
 }
 void rotateClockwiseMotor2(int speed) {
   analogWrite(IN3, speed);
   digitalWrite(IN4, LOW);
   Serial.println("Clockwise Rotation! " + String(speed));
+  delay(200);
 }
 
 void rotateCounterClockwiseMotor2(int speed) {
   digitalWrite(IN3, LOW);
   analogWrite(IN4, speed);
   Serial.println("Counterclockwise Rotation! " + String(speed));
+  delay(200);
 }
 
 void stopMotor2() {
@@ -58,7 +61,7 @@ void loop()
   preasureData(&myAltitudeData, &myTrimmingParameters);
   readAltitude(1020.5, &myAltitudeData);
   Serial.println();
-  delay(1000);
+  delay(800);
 
   stopMotor2();
   delay(500);
@@ -70,7 +73,7 @@ void loop()
   preasureData(&myAltitudeData, &myTrimmingParameters);
   readAltitude(1026.6, &myAltitudeData);
   Serial.println();
-  delay(1000);
+  delay(800);
   stopMotor2();
-  delay(5000);
+  delay(2000);
 }
