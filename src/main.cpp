@@ -56,7 +56,7 @@ void loop()
   gyroData(&myGyroData);
   tempData(&myAltitudeData, &myTrimmingParameters);
   preasureData(&myAltitudeData, &myTrimmingParameters);
-  readAltitude(1026.6, &myAltitudeData);
+  readAltitude(1020.5, &myAltitudeData);
   Serial.println();
   delay(1000);
 

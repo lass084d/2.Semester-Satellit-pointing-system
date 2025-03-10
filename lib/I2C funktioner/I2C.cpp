@@ -116,7 +116,7 @@ void initMPU6050()
 {
   Wire.beginTransmission(0x68); // MPU6050 address
   Wire.write(0x6B);             // Power management register
-  Wire.write(0b00000001);       // Wake up the MPU6050 and sets it to the X-axis gyroscope reference (it is recomended by the datasheet to use one of the gyroscope axies as the clock source)
+  Wire.write(0b00001001);       // Wake up the MPU6050 and sets it to the X-axis gyroscope reference (it is recomended by the datasheet to use one of the gyroscope axies as the clock source) and disable the temperature sensor
   Wire.endTransmission(true);
   
   Wire.beginTransmission(0x68); // MPU6050 address 
@@ -126,7 +126,7 @@ void initMPU6050()
 
   Wire.beginTransmission(0x68); // MPU6050 address7
   Wire.write(0x1B);             // Gyroscope configuration register
-  Wire.write(0b00000010);       // Set the gyroscope to full scale range of +/- 1000 degrees per second
+  Wire.write(0b00010000);       // Set the gyroscope to full scale range of +-1000 degrees per second
   Wire.endTransmission(true);
 
   Serial.println("MPU6050 initialized\n");
@@ -222,9 +222,9 @@ void accData(struct AccelData *AccelData)
   float accelZ = az_raw / 16384.0;
 
   // the g into m/s^2
-  accelX = accelX * 9.81;
-  accelY = accelY * 9.81;
-  accelZ = accelZ * 9.81;
+  accelX = accelX * 9.82;
+  accelY = (accelY * 9.82)*0.9949341439;
+  accelZ = (accelZ * 9.82)*0.9722772277;
 
   // Print acceleration values in g
   Serial.print(hour());
