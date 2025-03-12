@@ -141,6 +141,7 @@ struct trimming_parameters
  * @param accelY The y-axis acceleration data converted to m/s^2
  * @param accelZ The z-axis acceleration data converted to m/s^2
  */
+ 
 struct AccelData
 {
     int16_t ax_raw;

@@ -33,8 +33,8 @@ void setup()
   delay(1000);
 }
 void rotateClockwiseMotor(int speed) {
-  analogWrite(IN3, speed);
   digitalWrite(IN4, LOW);
+  analogWrite(IN3, speed);
   Serial.println("Clockwise Rotation! " + String(speed));
 }
 
@@ -52,7 +52,7 @@ void stopMotor() {
 
 void circle(int speed) {
   rotateClockwiseMotor(speed);
-  delay(1000);
+  delay(100);
 
   gyroData(&myGyroData);
   Serial.println();
@@ -72,7 +72,7 @@ void circle(int speed) {
 
 void loop(){
   // max bitrate
-  int x = 255;
+  int x = 256;
   for(int n = 0; n < x; n++) {
     Serial.println("Bitrate: " + String(n));
     //kører "circle" 5 gange
