@@ -166,18 +166,18 @@ void gyroData(struct GyroData *GyroData)
   float gyroZ = gz_raw / 32.8;
 
   // Print gyroscope values in degrees per second
-  Serial.print(hour());
-  Serial.print(":");
-  Serial.print(minute());
-  Serial.print(":");
-  Serial.print(second());
-  Serial.print("\tGyro X: ");
-  Serial.print(gyroX);
-  Serial.print(" deg/s");
-  Serial.print("\tY: ");
-  Serial.print(gyroY);
-  Serial.print(" deg/s");
-  Serial.print("\tZ: ");
+  //Serial.print(hour());
+  //Serial.print(":");
+  //Serial.print(minute());
+  //Serial.print(":");
+  //Serial.print(second());
+  //Serial.print("\tGyro X: ");
+  //Serial.print(gyroX);
+  //Serial.print(" deg/s");
+  //Serial.print("\tY: ");
+  //Serial.print(gyroY);
+  //Serial.print(" deg/s");
+  //Serial.print("\tZ: ");
   Serial.print(gyroZ);
   Serial.println(" deg/s");
 

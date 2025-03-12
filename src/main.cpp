@@ -53,19 +53,19 @@ void stopMotor() {
 void circle(int speed) {
   rotateClockwiseMotor(speed);
   delay(100);
-
   gyroData(&myGyroData);
   Serial.println();
+delay(100);
 
   stopMotor();
-  delay(200);
+  delay(20);
 
   rotateCounterClockwiseMotor(speed);
-  delay(1000);
-
+  delay(100);
   gyroData(&myGyroData);
   Serial.println();
-  
+  delay(100);
+
   stopMotor();
   delay(200);
 }
@@ -73,20 +73,18 @@ void circle(int speed) {
 void loop(){
   // max bitrate
   int x = 256;
+
   for(int n = 0; n < x; n++) {
-    Serial.println("Bitrate: " + String(n));
+    Serial.print("Bitrate: " + String(n));
     //kører "circle" 5 gange
     for (int i = 0; i < 5; i++) {
       circle(n);
     }
-    if(n < 255) {
-    Serial.println("Increasing bitrate");
-    }
-    else {
-      Serial.println("Max bitrate reached");
+  }
+
+
+  Serial.println("Max bitrate reached");
       while(true) {
         //do nothing - programmet er finished
       }
-    }
-  }
 }
