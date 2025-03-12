@@ -32,48 +32,61 @@ void setup()
   initMPU6050();
   delay(1000);
 }
-void rotateClockwiseMotor2(int speed) {
+void rotateClockwiseMotor(int speed) {
   analogWrite(IN3, speed);
   digitalWrite(IN4, LOW);
   Serial.println("Clockwise Rotation! " + String(speed));
-  delay(200);
 }
 
-void rotateCounterClockwiseMotor2(int speed) {
+void rotateCounterClockwiseMotor(int speed) {
   digitalWrite(IN3, LOW);
   analogWrite(IN4, speed);
   Serial.println("Counterclockwise Rotation! " + String(speed));
-  delay(200);
 }
 
-void stopMotor2() {
+void stopMotor() {
   digitalWrite(IN3, HIGH);
   digitalWrite(IN4, HIGH);
   Serial.println("Motor Stopped!");
 }
 
-void loop()
-{
-  rotateClockwiseMotor2(255);
-  accData(&myAccelData);
-  gyroData(&myGyroData);
-  tempData(&myAltitudeData, &myTrimmingParameters);
-  preasureData(&myAltitudeData, &myTrimmingParameters);
-  readAltitude(1020.5, &myAltitudeData);
-  Serial.println();
-  delay(800);
+void circle(int speed) {
+  rotateClockwiseMotor(speed);
+  delay(1000);
 
-  stopMotor2();
-  delay(500);
-
-  rotateCounterClockwiseMotor2(255);
-  accData(&myAccelData);
   gyroData(&myGyroData);
-  tempData(&myAltitudeData, &myTrimmingParameters);
-  preasureData(&myAltitudeData, &myTrimmingParameters);
-  readAltitude(1026.6, &myAltitudeData);
   Serial.println();
-  delay(800);
-  stopMotor2();
-  delay(2000);
+
+  stopMotor();
+  delay(200);
+
+  rotateCounterClockwiseMotor(speed);
+  delay(1000);
+
+  gyroData(&myGyroData);
+  Serial.println();
+  
+  stopMotor();
+  delay(200);
+}
+
+void loop(){
+  // max bitrate
+  int x = 255;
+  for(int n = 0; n < x; n++) {
+    Serial.println("Bitrate: " + String(n));
+    //kører "circle" 5 gange
+    for (int i = 0; i < 5; i++) {
+      circle(n);
+    }
+    if(n < 255) {
+    Serial.println("Increasing bitrate");
+    }
+    else {
+      Serial.println("Max bitrate reached");
+      while(true) {
+        //do nothing - programmet er finished
+      }
+    }
+  }
 }
