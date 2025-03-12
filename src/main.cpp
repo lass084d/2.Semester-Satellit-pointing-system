@@ -79,7 +79,7 @@ void circle(int speed) {
 
 void loop(){
   // max bitrate
-  int x = 256;
+  int x = 255;
 
   for(int n = 0; n < x; n++) {
     Serial.print("Bitrate: " + String(n));
