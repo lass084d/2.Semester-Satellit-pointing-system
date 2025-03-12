@@ -53,21 +53,28 @@ void stopMotor() {
 void circle(int speed) {
   rotateClockwiseMotor(speed);
   delay(100);
+ 
+  for (int x = 0; x<5; x++){
   gyroData(&myGyroData);
-  Serial.println();
-delay(100);
+  Serial.print(" ||| ");
+  delay(10);
+  }
 
   stopMotor();
-  delay(20);
+  delay(50);
 
   rotateCounterClockwiseMotor(speed);
   delay(100);
-  gyroData(&myGyroData);
-  Serial.println();
-  delay(100);
 
+  for (int x; x<5;x++){
+    gyroData(&myGyroData);
+    Serial.print(" ||| ");
+    delay(10);  
+  }
+  
   stopMotor();
-  delay(200);
+  delay(50);
+  Serial.println(" ");
 }
 
 void loop(){
@@ -76,10 +83,8 @@ void loop(){
 
   for(int n = 0; n < x; n++) {
     Serial.print("Bitrate: " + String(n));
-    //kører "circle" 5 gange
-    for (int i = 0; i < 5; i++) {
-      circle(n);
-    }
+    Serial.print(" ||| ");
+    circle(n);
   }
 
 
