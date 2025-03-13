@@ -74,7 +74,7 @@ void circle(int speed) {
   }
 
   stopMotor();
-  delay(100);
+  delay(200);
 
   rotateCounterClockwiseMotor(speed);
   delay(300);
@@ -86,7 +86,7 @@ void circle(int speed) {
   }
   
   stopMotor();
-  delay(100);
+  delay(200);
   Serial.println(" ");
 }
 
@@ -95,12 +95,12 @@ void loop(){
   int min = 30;
   int max = 255;
 
-  for(int n = min; n <= max - 1; n++) {
-    Serial.print("Bitrate: " + String(n));
-    Serial.print(" ||| ");
-    circle(n);
-  }
-
+for (int n = min; n < max + 1; n++)
+{
+  Serial.print("Bitrate: " + String(n));
+  Serial.print(" ||| ");
+  circle(n);
+}
 
   Serial.println("Max bitrate reached");
       while(true) {
