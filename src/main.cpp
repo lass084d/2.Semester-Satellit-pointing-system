@@ -1,6 +1,10 @@
 #include <I2C.h>
 #include <Arduino.h>
 
+void rotateClockwiseMotor(int speed);
+void rotateCounterClockwiseMotor(int speed);
+void stopMotor();
+
 /**
  * @link for the datasheet of the BMP280
  * https://www.bosch-sensortec.com/media/boschsensortec/downloads/datasheets/bst-bmp280-ds001.pdf
@@ -31,6 +35,15 @@ void setup()
              STANDBY_MS_1); // Standby time
   initMPU6050();
   delay(1000);
+  rotateClockwiseMotor(255);
+  delay(500);
+  stopMotor();
+  delay(500);
+  rotateCounterClockwiseMotor(255);
+  delay(500);
+  stopMotor();
+  delay(500);
+  Serial.println("Setup done!");
 }
 void rotateClockwiseMotor(int speed) {
   digitalWrite(IN4, LOW);
@@ -45,31 +58,31 @@ void rotateCounterClockwiseMotor(int speed) {
 }
 
 void stopMotor() {
-  digitalWrite(IN3, HIGH);
-  digitalWrite(IN4, HIGH);
+  digitalWrite(IN3, LOW);
+  digitalWrite(IN4, LOW);
   Serial.println("Motor Stopped!");
 }
 
 void circle(int speed) {
   rotateClockwiseMotor(speed);
-  delay(100);
+  delay(300);
  
   for (int x = 0; x<5; x++){
   gyroData(&myGyroData);
   Serial.print(" ||| ");
-  delay(10);
+  delay(200);
   }
 
   stopMotor();
   delay(100);
 
   rotateCounterClockwiseMotor(speed);
-  delay(100);
+  delay(300);
 
-  for (int x; x<5;x++){
+  for (int x = 0; x<5;x++){
     gyroData(&myGyroData);
     Serial.print(" ||| ");
-    delay(10);  
+    delay(200);  
   }
   
   stopMotor();
@@ -78,10 +91,11 @@ void circle(int speed) {
 }
 
 void loop(){
-  // max bitrate
-  int x = 256;
+//Motor kører ikke ved mindre end 31 bits. Dejlig pivende lyd kan nydes her i starten :D
+  int min = 30;
+  int max = 255;
 
-  for(int n = 0; n < x; n++) {
+  for(int n = min; n <= max - 1; n++) {
     Serial.print("Bitrate: " + String(n));
     Serial.print(" ||| ");
     circle(n);
