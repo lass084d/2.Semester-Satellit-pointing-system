@@ -61,7 +61,7 @@ void circle(int speed) {
   }
 
   stopMotor();
-  delay(50);
+  delay(100);
 
   rotateCounterClockwiseMotor(speed);
   delay(100);
@@ -73,7 +73,7 @@ void circle(int speed) {
   }
   
   stopMotor();
-  delay(50);
+  delay(100);
   Serial.println(" ");
 }
 
