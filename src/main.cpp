@@ -44,33 +44,37 @@ void setup()
   stopMotor();
   delay(500);
   Serial.println("Setup done!");
+  Serial.println("Bitrate, CW1, CW2, CW3, CW4, CW5, CCW1, CCW2, CCW3, CCW4, CCW5");
 }
 void rotateClockwiseMotor(int speed) {
   digitalWrite(IN4, LOW);
   analogWrite(IN3, speed);
-  Serial.println("Clockwise Rotation! " + String(speed));
+  // Serial.println("Clockwise Rotation! " + String(speed));
 }
 
 void rotateCounterClockwiseMotor(int speed) {
   digitalWrite(IN3, LOW);
   analogWrite(IN4, speed);
-  Serial.println("Counterclockwise Rotation! " + String(speed));
+  //Serial.println("Counterclockwise Rotation! " + String(speed));
 }
 
 void stopMotor() {
   digitalWrite(IN3, LOW);
   digitalWrite(IN4, LOW);
-  Serial.println("Motor Stopped!");
+ // Serial.println("Motor Stopped!");
 }
 
 void circle(int speed) {
+  float cw[5];  // Array til Clockwise målinger
+  float ccw[5]; // Array til Counterclockwise målinger
+
   rotateClockwiseMotor(speed);
   delay(300);
- 
-  for (int x = 0; x<5; x++){
-  gyroData(&myGyroData);
-  Serial.print(" ||| ");
-  delay(200);
+
+  for (int x = 0; x < 5; x++) {
+    gyroData(&myGyroData);
+    cw[x] = myGyroData.gyroX;  // Gemmer målingen i arrayet
+    delay(200);
   }
 
   stopMotor();
@@ -79,15 +83,26 @@ void circle(int speed) {
   rotateCounterClockwiseMotor(speed);
   delay(300);
 
-  for (int x = 0; x<5;x++){
+  for (int x = 0; x < 5; x++) {
     gyroData(&myGyroData);
-    Serial.print(" ||| ");
-    delay(200);  
+    ccw[x] = myGyroData.gyroX;  // Gemmer målingen i arrayet
+    delay(200);
   }
   
   stopMotor();
   delay(200);
-  Serial.println(" ");
+
+  Serial.print(speed);
+  Serial.print(",");
+  for (int x = 0; x < 5; x++) {
+    Serial.print(cw[x]);
+    Serial.print(",");
+  }
+  for (int x = 0; x < 5; x++) {
+    Serial.print(ccw[x]);
+    if (x < 4) Serial.print(","); // Undgå ekstra komma i slutningen
+  }
+  Serial.println();
 }
 
 void loop(){
@@ -97,8 +112,8 @@ void loop(){
 
 for (int n = min; n < max + 1; n++)
 {
-  Serial.print("Bitrate: " + String(n));
-  Serial.print(" ||| ");
+  //Serial.print("Bitrate: " + String(n));
+  //Serial.print(" ||| ");
   circle(n);
 }
 
