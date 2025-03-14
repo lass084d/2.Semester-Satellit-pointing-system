@@ -73,7 +73,7 @@ void circle(int speed) {
 
   for (int x = 0; x < 5; x++) {
     gyroData(&myGyroData);
-    cw[x] = myGyroData.gyroX;  // Gemmer målingen i arrayet
+    cw[x] = myGyroData.gyroZ;  // Gemmer målingen i arrayet
     delay(200);
   }
 
@@ -85,7 +85,7 @@ void circle(int speed) {
 
   for (int x = 0; x < 5; x++) {
     gyroData(&myGyroData);
-    ccw[x] = myGyroData.gyroX;  // Gemmer målingen i arrayet
+    ccw[x] = myGyroData.gyroZ;  // Gemmer målingen i arrayet
     delay(200);
   }
   
@@ -107,7 +107,7 @@ void circle(int speed) {
 
 void loop(){
 //Motor kører ikke ved mindre end 31 bits. Dejlig pivende lyd kan nydes her i starten :D
-  int min = 30;
+  int min = 120;
   int max = 255;
 
 for (int n = min; n < max + 1; n++)

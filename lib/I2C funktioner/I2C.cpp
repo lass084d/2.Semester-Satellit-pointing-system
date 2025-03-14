@@ -178,8 +178,9 @@ void gyroData(struct GyroData *GyroData)
   //Serial.print(gyroY);
   //Serial.print(" deg/s");
   //Serial.print("\tZ: ");
-  Serial.print(gyroZ);
-  Serial.println(" deg/s");
+
+  // Serial.print(gyroZ);
+  // Serial.println(" deg/s");
 
   GyroData->gyroX = gyroX;
   GyroData->gyroY = gyroY;
