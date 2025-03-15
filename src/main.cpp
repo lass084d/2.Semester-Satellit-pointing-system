@@ -117,7 +117,7 @@ for (int n = min; n < max + 1; n++)
   circle(n);
 }
 
-  Serial.println("Max bitrate reached");
+  //Serial.println("Max bitrate reached");
       while(true) {
         //do nothing - programmet er finished
       }
