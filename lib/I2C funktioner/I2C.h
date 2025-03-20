@@ -185,10 +185,12 @@ struct GyroData
     float gyroZ;
 };
 
-#define BMP_280_ADDRESS 0x76
+#define BMP_ADDRESS 0x77
+#define MPU_ADDRESS 0x68
+#define HMC_ADDRESS 0x1E
 #define TEST
 #define CONVERT
-
+#define SETTINGS
 
 /**
  * @brief Sets the sampling settings for the BMP280
@@ -202,7 +204,8 @@ void setSamplingSettings(sensor_mode mode,
                          sensor_sampling tempSampling,
                          sensor_sampling pressSampling,
                          sensor_filter filter,
-                         standby_duration duration);
+                         standby_duration duration
+);
 
 /**
  * @brief Initializes the BMP280 with the given settings
@@ -213,12 +216,13 @@ void setSamplingSettings(sensor_mode mode,
  * @param filter The IIR filtering mode to apply (if any)
  * @param duration The time btween each reading/measurement of pressure and temperature
  */
-void initBMP280(struct trimming_parameters *trimming_parameters,
+void initBMP(struct trimming_parameters *trimming_parameters,
                 sensor_mode mode,
                 sensor_sampling tempSampling,
                 sensor_sampling pressSampling,
                 sensor_filter filter,
-                standby_duration duration);
+                standby_duration duration
+);
 
 /**
  * @brief Scans the I2C bus for devices and prints the addresses of the devices found
@@ -228,7 +232,9 @@ void scanForAdress();
 /**
  * @brief Initializes the MPU6050
  */
-void initMPU6050();
+void initMPU();
+
+void initHMC();
 
 /**
  * @brief Reads the acceleration from the MPU6050 and stores it in the AccelData struct
@@ -262,3 +268,8 @@ void preasureData(struct AltitudeData *AltitudeData, struct trimming_parameters 
  *@param AltitudeData The struct to store the altitude data
  */
 void readAltitude(float seaLevelhPa, struct AltitudeData *AltitudeData);
+
+/**
+ *@brief measures the srength of the magnetic field in the x, y and z direction relativ to the sensor
+ */
+void readMagnetometer();

@@ -7,33 +7,32 @@
  * https://www.invensense.com/wp-content/uploads/2015/02/MPU-6000-Datasheet1.pdf
  * @link for the I2C register map of the MPU6050
  * https://www.invensense.tdk.com/wp-content/uploads/2015/02/MPU-6000-Register-Map1.pdf
+ * @link for the datasheet of the HMC5883L
+ * https://cdn-shop.adafruit.com/datasheets/HMC5883L_3-Axis_Digital_Compass_IC.pdf
+ * @link for finding magnetic field strength at points on earth's surface
+ * https://www.magnetic-declination.com/
+ * @link for af konvertere enheder (tesla til gauss)
+ * https://www.kjmagnetics.com/magnetic-unit-converter.asp?srsltid=AfmBOopKtH_5hIZi36xgF-83J_Lwkvn93AuMc-fwOuHIk1iahbT6r5oa
  */
 
 struct AccelData myAccelData;
-struct trimming_parameters myTrimmingParameters;
-struct AltitudeData myAltitudeData;
 struct GyroData myGyroData;
 
 void setup()
 {
-  Serial.begin(9600);
+  Serial.begin(115200);
   Wire.begin();
-  initBMP280(&myTrimmingParameters,
-             MODE_NORMAL,   // Opperating mode
-             SAMPLING_X1,   // Temp oversampling
-             SAMPLING_X4,   // Pressure oversampling
-             FILTER_X16,    //  IIR Filtering
-             STANDBY_MS_1); // Standby time
-  initMPU6050();
+  initMPU();
+  initHMC();
+
+  scanForAdress();
 }
 
 void loop()
 {
-  accData(&myAccelData);
-  gyroData(&myGyroData);
-  tempData(&myAltitudeData, &myTrimmingParameters);
-  preasureData(&myAltitudeData, &myTrimmingParameters);
-  readAltitude(1020.5, &myAltitudeData);
-  Serial.println();
-  delay(5000);
+  readMagnetometer();
+  //accData(&myAccelData);
+  //gyroData(&myGyroData);
+  //Serial.println();
+  delay(500);
 }
