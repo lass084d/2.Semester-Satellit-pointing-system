@@ -1,83 +1,102 @@
-#include <I2C.h>
+#include <Arduino.h>
+#include "esp_timer.h"
+#include <math.h>
 
-/**
- * @link for the datasheet of the BMP280
- * https://www.bosch-sensortec.com/media/boschsensortec/downloads/datasheets/bst-bmp280-ds001.pdf
- * @link for the datasheet of the MPU6050
- * https://www.invensense.com/wp-content/uploads/2015/02/MPU-6000-Datasheet1.pdf
- * @link for the I2C register map of the MPU6050
- * https://www.invensense.tdk.com/wp-content/uploads/2015/02/MPU-6000-Register-Map1.pdf
- * @link for the datasheet of the HMC5883L
- * https://cdn-shop.adafruit.com/datasheets/HMC5883L_3-Axis_Digital_Compass_IC.pdf
- * @link for finding magnetic field strength at points on earth's surface
- * https://www.magnetic-declination.com/
- * @link for af konvertere enheder (tesla til gauss)
- * https://www.kjmagnetics.com/magnetic-unit-converter.asp?srsltid=AfmBOopKtH_5hIZi36xgF-83J_Lwkvn93AuMc-fwOuHIk1iahbT6r5oa
- */
+//Set the desired angle (radians) and define desired X and Y koordinates
+double desiredAngle = 180*M_PI/180;
+double desiredX;
+double desiredY;
 
-struct AccelData myAccelData;
-struct GyroData myGyroData;
+//PID-controller Constants and variables
+const u_int8_t KP = 1e-6, KI=1.3e-8, KD=9e-6;
 
-long long abe = 0;
+double P, I = 0, D;
+double sensorAngle;
+double error;
+double lastError;
+double PIDOutput;
 
-void setup()
-{
+//Time
+double dt;
+double startTime = 0;
+double currentTime;
 
-  pinMode(13, INPUT_PULLUP);
-  while (digitalRead(13) == HIGH)
+//set pins
+const int motorPin1 = 22;
+const int motorPin2 = 23;
+const int PWMPin = 21;
+
+//Pwm converting values
+double Vmaks = 9;
+double PWMmaks = 4095;
+double PWMToMotor;
+
+  
+double ErrorAngleAndDirection (double desiredx, double desiredy){   
+//find the angle between the vector and the current angle   
+double sensorX = 0.4; //Sensor data!!!
+double sensorY = -0.4; //Sensor data!!!
+double dotproduct = desiredx*sensorX+desiredy*sensorY;
+  
+double lenOfxy = sqrt(pow(sensorX,2)+pow(sensorY,2));
+double angle = acos(dotproduct/lenOfxy); //Formula acos((a ⋅ b)/(|a|*|b|)), but the length of the desired vector is 1 
+
+
+//Use the crossproduct to find the direction that is the shortest
+double crossproduct = sensorX*desiredy-sensorY*desiredx;
+
+if (crossproduct<=0)
   {
-    // Wait for the button to be pressed
+    digitalWrite(motorPin1,LOW);
+    digitalWrite(motorPin2,HIGH);
+    Serial.println("Move the motor Counterclockwise, so the cubesat moves clockwise");
+  }
+  else if (crossproduct>0)
+  {
+    digitalWrite(motorPin2,LOW);
+    digitalWrite(motorPin1,HIGH);
+    Serial.println("Move the motor clockwise, so the cubesat moves counterclockwise");
   }
 
-  delay(3000);
-  Serial.begin(115200); // USB Serial for PC monitoring
-  Serial2.begin(9600, SERIAL_8N1, RXD2, TXD2);
-  Wire.begin(21, 22);
-
-  Serial.println();
-
-  scanForAdress();
-  initMPU();
-  initHMC();
-
-  Serial2.print("Time");
-  Serial2.print(",");
-  Serial2.print("X-axis");
-  Serial2.print(",");
-  Serial2.print("Y-axis");
-  Serial2.print(",");
-  Serial2.println("Z-axis");
-
-  readMagnetometer();
-
-  pinMode(2, OUTPUT);
-  pinMode(4, OUTPUT);
-  digitalWrite(2, HIGH);
-  digitalWrite(4, LOW);
-  abe = millis();
+return angle;
 }
 
-void loop()
-{
-  readMagnetometer();
 
-  // accData(&myAccelData);
-  // gyroData(&myGyroData);
-  // Serial2.println();
+void setup() {
+  // put your setup code here, to run once:
+  lastError = 0;
+  Serial.begin(115200);
+  pinMode(motorPin1,OUTPUT);
+  pinMode(motorPin2,OUTPUT);
+  pinMode(PWMPin, OUTPUT);
+}
 
-  if (millis() > abe + 120000)
-  {
-    digitalWrite(2, HIGH);
-    digitalWrite(4, HIGH);
-    while (1)
-    {
-      readMagnetometer();
-      if (millis() > abe + 180000)
-      {
-        while (1)
-        {
-        }
-      }
-    }
-  }
+
+void loop() {
+  // put your main code here, to run repeatedly:
+
+  //Convert the desired angle to coordinates  
+  desiredX = cos(desiredAngle);
+  desiredY = sin(desiredAngle);   
+  
+//Find the error and set the direction the motor need to spin in
+  error = ErrorAngleAndDirection(desiredX,desiredY);
+  Serial.println(error,6);
+
+  //The difference in time since last time the PID ran
+  currentTime = esp_timer_get_time()*1e-6;
+  dt = currentTime - startTime;
+  startTime = esp_timer_get_time()*1e-6;
+
+  //calculate the PID values bassed on the error (output in voltage):
+  P = KP * error;
+  I += KI*(error*dt);
+  D = (error-lastError)/dt;
+
+  //Convert voltage to pwm
+  PIDOutput = P+I+D;
+  PWMToMotor =PIDOutput/Vmaks*PWMmaks;
+  analogWrite(PWMPin,PWMToMotor);
+
+  lastError = error;
 }
