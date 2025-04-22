@@ -92,24 +92,24 @@ void initBMP(struct trimming_parameters *trimming_parameters,
   Wire.write(0xF4);                       // Specify first register
   Wire.endTransmission(false);            // End the transmission and initiate a new one emediatly
   Wire.requestFrom(BMP_ADDRESS, 2, true); // Request 2 bytes from 0xF4 and 0xF5
-  Serial.println("BMP280 initialized");
-  Serial.println("Curent settings:");
+  Serial2.println("BMP280 initialized");
+  Serial2.println("Curent settings:");
 
   int8_t settings_0xF4 = Wire.read();
   int8_t settings_0xF5 = Wire.read();
 
-  Serial.print("0xF4: ");
+  Serial2.print("0xF4: ");
   for (int i = 7; i >= 0; i--)
-  {                                         // Loop from 7 to 0 (for 8-bit binary representation)
-    Serial.print((settings_0xF4 >> i) & 1); // Shift the bits and print each bit
+  {                                          // Loop from 7 to 0 (for 8-bit binary representation)
+    Serial2.print((settings_0xF4 >> i) & 1); // Shift the bits and print each bit
   }
-  Serial.println(); // Print a new line after the binary representation
-  Serial.print("0xF5: ");
+  Serial2.println(); // Print a new line after the binary representation
+  Serial2.print("0xF5: ");
   for (int i = 7; i >= 0; i--)
-  {                                         // Loop from 7 to 0 (for 8-bit binary representation)
-    Serial.print((settings_0xF5 >> i) & 1); // Shift the bits and print each bit
+  {                                          // Loop from 7 to 0 (for 8-bit binary representation)
+    Serial2.print((settings_0xF5 >> i) & 1); // Shift the bits and print each bit
   }
-  Serial.println("\n");
+  Serial2.println("\n");
 }
 
 void initHMC()
@@ -128,22 +128,24 @@ void initHMC()
   Wire.endTransmission(false);            // Don't release the bus to do a repeated start
   Wire.requestFrom(HMC_ADDRESS, 1, true); // Reads settings from register A
   abe = Wire.read();
-  Serial.print("Configuration Register A 0x00: ");
+  Serial.println("Configuration Register A 0x00: ");
   if (abe == 0b00010000)
   {
-    Serial.print("sample rate set to 15Hz, sample size to 1 and normal measurement mode: 0b");
+    Serial.print("sample rate set to 15Hz, sample size to 1 and normal measurement mode: ");
     // Loop through each bit (8 bits) and print it
-    for (int i = 7; i >= 0; i--)
-    {
-      // Use bitRead to read each bit starting from the most significant bit (7)
-      Serial.print(bitRead(abe, i));
-    };
   }
+  Serial.print("0b");
+  for (int i = 7; i >= 0; i--)
+  {
+    // Use bitRead to read each bit starting from the most significant bit (7)
+    Serial.print(bitRead(abe, i));
+  };
+  Serial.println("");
 #endif
 
   Wire.beginTransmission(HMC_ADDRESS); // HMC address
   Wire.write(0x01);                    // Sets Configuration Register B
-  Wire.write(0b00000000);              // Set the range to +-0.88Ga
+  Wire.write(0b11100000);              // Set the range to +-8.1Ga
   Wire.endTransmission(true);
   delay(10);
 
@@ -178,49 +180,69 @@ void initHMC()
 
 void initMPU()
 {
+
+#ifdef TEST
+
+  Wire.beginTransmission(MPU_ADDRESS);
+  Wire.write(0x75);
+  Wire.endTransmission(false);
+  Wire.requestFrom(MPU_ADDRESS, 1, true); // Request 1 byte from the WHO_AM_I register
+
+  Serial.println(Wire.read(), HEX); // Read the WHO_AM_I register to check if the MPU6050 is connected
+
+  delay(250);
+
+#endif
+
   Wire.beginTransmission(MPU_ADDRESS); // MPU address
   Wire.write(0x6B);                    // Power management register
   Wire.write(0b10000000);              // Write a one to bit 7 reset bit; toggle reset device
   Wire.endTransmission(true);
-  delay(100);
+  delay(500);
 
   Wire.beginTransmission(MPU_ADDRESS); // MPU address
   Wire.write(0x6B);                    // Power management register
   Wire.write(0b00000000);              // Clear sleep mode bit (6), enable all sensors
   Wire.endTransmission(true);
-  delay(100);
+  delay(250);
 
   Wire.beginTransmission(MPU_ADDRESS); // MPU address
   Wire.write(0x6B);                    // Power management register
   Wire.write(0b00000001);              // sets it to the X-axis gyroscope reference (it is recomended by the datasheet to use one of the gyroscope axies as the clock source) and disable the temperature sensor
   Wire.endTransmission(true);
-  delay(200);
+  delay(250);
 
   Wire.beginTransmission(MPU_ADDRESS); // MPU address
   Wire.write(0x1A);                    // DLPF (Digital low pass filter) configuration register
   Wire.write(0b00000100);              // Set the DLPF to 20Hz with a total delay of 16.8ms across accelerometer and gyroscope
   Wire.endTransmission(true);
+  delay(250);
 
   Wire.beginTransmission(MPU_ADDRESS); // MPU address
   Wire.write(0x1B);                    // Gyroscope configuration register
   Wire.write(0b00010000);              // Set the gyroscope to full scale range of +-1000 degrees per second
   Wire.endTransmission(true);
+  delay(250);
 
   Wire.beginTransmission(MPU_ADDRESS); // MPU address
   Wire.write(0x1c);                    // accelerometer configuration register
   Wire.write(0b00000000);              // Set the accelerometer to full scale range of +-2g
   Wire.endTransmission(true);
 
+  delay(250);
+
   Wire.beginTransmission(MPU_ADDRESS); // MPU address
   Wire.write(0x37);                    // Interrupt configuration register
   Wire.write(0x22);                    // Set the interrupt to active high and neabels I2C BYPASS mode
   Wire.endTransmission(true);
 
+  delay(250);
+
   Wire.beginTransmission(MPU_ADDRESS); // MPU address
   Wire.write(0x38);                    // Interrupt configuration register
   Wire.write(0x01);                    // enables Data Ready interrupt, which occurs each time a write operation to all of the sensor registers has been completed.
   Wire.endTransmission(true);
-  delay(100);
+  delay(250);
 
   Serial.println("MPU6050 initialized\n");
 };
@@ -240,12 +262,12 @@ void gyroData(struct GyroData *GyroData)
 
 #ifndef CONVERT
   // Print gyroscope values
-  Serial.print("raw Gyro X: ");
-  Serial.print(gx_raw);
-  Serial.print("\tY: ");
-  Serial.print(gy_raw);
-  Serial.print("\tZ: ");
-  Serial.println(gz_raw);
+  Serial2.print("raw Gyro X: ");
+  Serial2.print(gx_raw);
+  Serial2.print("\tY: ");
+  Serial2.print(gy_raw);
+  Serial2.print("\tZ: ");
+  Serial2.println(gz_raw);
 #endif
 
   GyroData->gx_raw = gx_raw;
@@ -259,20 +281,20 @@ void gyroData(struct GyroData *GyroData)
   float gyroZ = gz_raw / 32.8;
 
   // Print gyroscope values in degrees per second
-  Serial.print(hour());
-  Serial.print(":");
-  Serial.print(minute());
-  Serial.print(":");
-  Serial.print(second());
-  Serial.print("\tGyro X: ");
-  Serial.print(gyroX);
-  Serial.print(" deg/s");
-  Serial.print("\tY: ");
-  Serial.print(gyroY);
-  Serial.print(" deg/s");
-  Serial.print("\tZ: ");
-  Serial.print(gyroZ);
-  Serial.println(" deg/s");
+  Serial2.print(hour());
+  Serial2.print(":");
+  Serial2.print(minute());
+  Serial2.print(":");
+  Serial2.print(second());
+  Serial2.print("\tGyro X: ");
+  Serial2.print(gyroX);
+  Serial2.print(" deg/s");
+  Serial2.print("\tY: ");
+  Serial2.print(gyroY);
+  Serial2.print(" deg/s");
+  Serial2.print("\tZ: ");
+  Serial2.print(gyroZ);
+  Serial2.println(" deg/s");
 
   GyroData->gyroX = gyroX;
   GyroData->gyroY = gyroY;
@@ -295,12 +317,12 @@ void accData(struct AccelData *AccelData)
 
 #ifndef CONVERT
   // Print acceleration values
-  Serial.print("raw Accel X: ");
-  Serial.print(ax_raw);
-  Serial.print("\tY: ");
-  Serial.print(ay_raw);
-  Serial.print("\tZ: ");
-  Serial.println(az_raw);
+  Serial2.print("raw Accel X: ");
+  Serial2.print(ax_raw);
+  Serial2.print("\tY: ");
+  Serial2.print(ay_raw);
+  Serial2.print("\tZ: ");
+  Serial2.println(az_raw);
 
 #endif
 
@@ -320,20 +342,20 @@ void accData(struct AccelData *AccelData)
   accelZ = (accelZ * 9.82) * 0.9722772277;
 
   // Print acceleration values in g
-  Serial.print(hour());
-  Serial.print(":");
-  Serial.print(minute());
-  Serial.print(":");
-  Serial.print(second());
-  Serial.print("\tAccel X: ");
-  Serial.print(accelX);
-  Serial.print(" m/s^2");
-  Serial.print("\tY: ");
-  Serial.print(accelY);
-  Serial.print(" m/s^2");
-  Serial.print("\tZ: ");
-  Serial.print(accelZ);
-  Serial.println(" m/s^2");
+  Serial2.print(hour());
+  Serial2.print(":");
+  Serial2.print(minute());
+  Serial2.print(":");
+  Serial2.print(second());
+  Serial2.print("\tAccel X: ");
+  Serial2.print(accelX);
+  Serial2.print(" m/s^2");
+  Serial2.print("\tY: ");
+  Serial2.print(accelY);
+  Serial2.print(" m/s^2");
+  Serial2.print("\tZ: ");
+  Serial2.print(accelZ);
+  Serial2.println(" m/s^2");
 
   AccelData->accelX = accelX;
   AccelData->accelY = accelY;
@@ -367,15 +389,15 @@ void tempData(struct AltitudeData *AltitudeData, struct trimming_parameters *tri
 
   AltitudeData->temperature = temperature;
 
-  Serial.print(hour());
-  Serial.print(":");
-  Serial.print(minute());
-  Serial.print(":");
-  Serial.print(second());
+  Serial2.print(hour());
+  Serial2.print(":");
+  Serial2.print(minute());
+  Serial2.print(":");
+  Serial2.print(second());
 
-  Serial.print("\tTemperature: ");
-  Serial.print(temperature);
-  Serial.println("C");
+  Serial2.print("\tTemperature: ");
+  Serial2.print(temperature);
+  Serial2.println("C");
 }
 
 void preasureData(struct AltitudeData *AltitudeData, struct trimming_parameters *trimming_parameters)
@@ -415,14 +437,14 @@ void preasureData(struct AltitudeData *AltitudeData, struct trimming_parameters 
 
   AltitudeData->pressure = (float)p / 256;
 
-  Serial.print(hour());
-  Serial.print(":");
-  Serial.print(minute());
-  Serial.print(":");
-  Serial.print(second());
-  Serial.print("\tPressure: ");
-  Serial.print(AltitudeData->pressure);
-  Serial.println("Pa");
+  Serial2.print(hour());
+  Serial2.print(":");
+  Serial2.print(minute());
+  Serial2.print(":");
+  Serial2.print(second());
+  Serial2.print("\tPressure: ");
+  Serial2.print(AltitudeData->pressure);
+  Serial2.println("Pa");
 }
 
 void readAltitude(float seaLevelhPa, struct AltitudeData *AltitudeData)
@@ -436,20 +458,20 @@ void readAltitude(float seaLevelhPa, struct AltitudeData *AltitudeData)
 
   AltitudeData->altitude = altitude;
 
-  Serial.print(hour());
-  Serial.print(":");
-  Serial.print(minute());
-  Serial.print(":");
-  Serial.print(second());
-  Serial.print("\tAltitude: ");
-  Serial.print(AltitudeData->altitude);
-  Serial.println("m");
+  Serial2.print(hour());
+  Serial2.print(":");
+  Serial2.print(minute());
+  Serial2.print(":");
+  Serial2.print(second());
+  Serial2.print("\tAltitude: ");
+  Serial2.print(AltitudeData->altitude);
+  Serial2.println("m");
 }
 
 void readMagnetometer()
 {
-  int8_t var1;
-  int8_t var2;
+  uint8_t var1;
+  uint8_t var2;
   // Reading the magnetometer values (for example)
   Wire.beginTransmission(HMC_ADDRESS);
   Wire.write(0x03); // Starting register for magnetometer data
@@ -482,26 +504,36 @@ void readMagnetometer()
  GyroData->gz_raw = gz_raw;
 */
 #ifdef CONVERT
-  // Convert the raw values to Gauss using the sensitivity scale factor of 0.73 milliGauss per LSB
-  float magX = (float)m_x_raw * (float)0.73;
-  float magY = (float)m_y_raw * (float)0.73;
-  float magZ = (float)m_z_raw * (float)0.73;
+  // Convert the raw values to Gauss using the sensitivity scale factor of 4.35 milliGauss per LSB
+  float magX = ((float)m_x_raw * (float)4.35) + (float)746.025;
+  float magY = (float)m_y_raw * (float)4.35;
+  float magZ = (float)m_z_raw * (float)4.35;
 
   // Print gyroscope values in degrees per second
-  Serial.print(hour());
-  Serial.print(":");
-  Serial.print(minute());
-  Serial.print(":");
-  Serial.print(second());
-  Serial.print("\tMagnetometer X: ");
-  Serial.print(magX);
-  Serial.print(" Milli Gauss");
-  Serial.print("\tY: ");
-  Serial.print(magY);
-  Serial.print(" Milli Gauss");
-  Serial.print("\tZ: ");
-  Serial.print(magZ);
-  Serial.println(" Milli Gauss");
+
+  Serial2.print(hour());
+  Serial2.print(":");
+  Serial2.print(minute());
+  Serial2.print(":");
+  Serial2.print(second());
+  Serial2.print(",");
+
+  // Serial2.print("\tMagnetometer X: ");
+  Serial2.print(magX);
+  //Serial.print(magX);
+  // Serial2.print(" Milli Gauss");
+  Serial2.print(",");
+
+  // Serial2.print("\tY: ");
+  Serial2.print(magY);
+  // Serial2.print(" Milli Gauss");
+  Serial2.print(",");
+
+  // Serial2.print("\tZ: ");
+  Serial2.print(magZ);
+  Serial2.print(",");
+
+  Serial2.println(" Milli Gauss");
 /*
  GyroData->gyroX = gyroX;
  GyroData->gyroY = gyroY;

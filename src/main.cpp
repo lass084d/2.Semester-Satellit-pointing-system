@@ -18,21 +18,66 @@
 struct AccelData myAccelData;
 struct GyroData myGyroData;
 
+long long abe = 0;
+
 void setup()
 {
-  Serial.begin(115200);
-  Wire.begin();
+
+  pinMode(13, INPUT_PULLUP);
+  while (digitalRead(13) == HIGH)
+  {
+    // Wait for the button to be pressed
+  }
+
+  delay(3000);
+  Serial.begin(115200); // USB Serial for PC monitoring
+  Serial2.begin(9600, SERIAL_8N1, RXD2, TXD2);
+  Wire.begin(21, 22);
+
+  Serial.println();
+
+  scanForAdress();
   initMPU();
   initHMC();
 
-  scanForAdress();
+  Serial2.print("Time");
+  Serial2.print(",");
+  Serial2.print("X-axis");
+  Serial2.print(",");
+  Serial2.print("Y-axis");
+  Serial2.print(",");
+  Serial2.println("Z-axis");
+
+  readMagnetometer();
+
+  pinMode(2, OUTPUT);
+  pinMode(4, OUTPUT);
+  digitalWrite(2, HIGH);
+  digitalWrite(4, LOW);
+  abe = millis();
 }
 
 void loop()
 {
   readMagnetometer();
-  //accData(&myAccelData);
-  //gyroData(&myGyroData);
-  //Serial.println();
-  delay(500);
+
+  // accData(&myAccelData);
+  // gyroData(&myGyroData);
+  // Serial2.println();
+
+  if (millis() > abe + 120000)
+  {
+    digitalWrite(2, HIGH);
+    digitalWrite(4, HIGH);
+    while (1)
+    {
+      readMagnetometer();
+      if (millis() > abe + 180000)
+      {
+        while (1)
+        {
+        }
+      }
+    }
+  }
 }

@@ -188,9 +188,11 @@ struct GyroData
 #define BMP_ADDRESS 0x77
 #define MPU_ADDRESS 0x68
 #define HMC_ADDRESS 0x1E
-#define TEST
+//#define TEST
 #define CONVERT
-#define SETTINGS
+//#define SETTINGS
+#define RXD2 16  // RX2 pin
+#define TXD2 17  // TX2 pin
 
 /**
  * @brief Sets the sampling settings for the BMP280
