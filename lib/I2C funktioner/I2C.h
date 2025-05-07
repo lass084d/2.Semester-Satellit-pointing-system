@@ -180,9 +180,29 @@ struct GyroData
     int16_t gy_raw;
     int16_t gz_raw;
 
-    float gyroX;
-    float gyroY;
-    float gyroZ;
+    double gyroX;
+    double gyroY;
+    double gyroZ;
+};
+
+/**
+ * @brief Struct to store the magnetometer data
+ * @param mx_raw The raw x-axis magnetometer data
+ * @param my_raw The raw y-axis magnetometer data
+ * @param mz_raw The raw z-axis magnetometer data
+ * @param magX The x-axis magnetometer data converted to Gauss
+ * @param magY The y-axis magnetometer data converted to Gauss
+ * @param magZ The z-axis magnetometer data converted to Gauss
+ */
+struct MagData
+{
+    int16_t mx_raw;
+    int16_t my_raw;
+    int16_t mz_raw;
+
+    double magX;
+    double magY;
+    double magZ;
 };
 
 #define BMP_ADDRESS 0x77
@@ -274,4 +294,4 @@ void readAltitude(float seaLevelhPa, struct AltitudeData *AltitudeData);
 /**
  *@brief measures the srength of the magnetic field in the x, y and z direction relativ to the sensor
  */
-void readMagnetometer();
+void readMagnetometer(struct MagData *MagData);

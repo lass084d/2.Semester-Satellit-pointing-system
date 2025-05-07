@@ -118,7 +118,7 @@ void initHMC()
   uint8_t abe;
   Wire.beginTransmission(HMC_ADDRESS); // HMC address
   Wire.write(0x00);                    // Sets Configuration Register A
-  Wire.write(0b01110000);              // Set sample rate to 15Hz, sample size to 1 and normal measurement mode
+  Wire.write(0b01111000);              // Set sample rate to 15Hz, sample size to 1 and normal measurement mode
   Wire.endTransmission(true);
   delay(10);
 
@@ -468,7 +468,7 @@ void readAltitude(float seaLevelhPa, struct AltitudeData *AltitudeData)
   Serial2.println("m");
 }
 
-void readMagnetometer()
+void readMagnetometer(struct MagData *MagData)
 {
   uint8_t var1;
   uint8_t var2;
@@ -505,39 +505,42 @@ void readMagnetometer()
 */
 #ifdef CONVERT
   // Convert the raw values to Gauss using the sensitivity scale factor of 4.35 milliGauss per LSB
-  float magX = ((float)m_x_raw * (float)4.35) + (float)746.025;
-  float magY = (float)m_y_raw * (float)4.35;
-  float magZ = (float)m_z_raw * (float)4.35;
+  double magX = ((double)m_x_raw * (double)4.35) + (double)1048.5;
+  double magY = ((double)m_y_raw * (double)4.35) + (double)661;
+  double magZ = ((double)m_z_raw * (double)4.35) + (double)0;
 
-  // Print gyroscope values in degrees per second
-
-  Serial2.print(hour());
-  Serial2.print(":");
+/*
   Serial2.print(minute());
   Serial2.print(":");
   Serial2.print(second());
+  Serial2.print(":");
+  Serial2.print(millis() % 1000);
   Serial2.print(",");
+
 
   // Serial2.print("\tMagnetometer X: ");
   Serial2.print(magX);
+  //Serial2.print("\t");
   //Serial.print(magX);
   // Serial2.print(" Milli Gauss");
   Serial2.print(",");
 
   // Serial2.print("\tY: ");
   Serial2.print(magY);
+  //Serial2.print("\t");
   // Serial2.print(" Milli Gauss");
   Serial2.print(",");
 
   // Serial2.print("\tZ: ");
-  Serial2.print(magZ);
-  Serial2.print(",");
+  Serial2.println(magZ);
+  //Serial2.print(",");
 
-  Serial2.println(" Milli Gauss");
-/*
- GyroData->gyroX = gyroX;
- GyroData->gyroY = gyroY;
- GyroData->gyroZ = gyroZ;
+  //Serial2.println(" Milli Gauss");
 */
+
+ MagData->magX = magX;
+ MagData->magY = magY;
+ MagData->magZ = magZ;
+
 #endif
 }

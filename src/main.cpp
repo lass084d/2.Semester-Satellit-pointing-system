@@ -17,6 +17,7 @@
 
 struct AccelData myAccelData;
 struct GyroData myGyroData;
+struct MagData myMagData;
 
 long long abe = 0;
 
@@ -28,13 +29,9 @@ void setup()
   {
     // Wait for the button to be pressed
   }
-
-  delay(3000);
   Serial.begin(115200); // USB Serial for PC monitoring
   Serial2.begin(9600, SERIAL_8N1, RXD2, TXD2);
   Wire.begin(21, 22);
-
-  Serial.println();
 
   scanForAdress();
   initMPU();
@@ -48,31 +45,36 @@ void setup()
   Serial2.print(",");
   Serial2.println("Z-axis");
 
-  readMagnetometer();
 
-  pinMode(2, OUTPUT);
-  pinMode(4, OUTPUT);
-  digitalWrite(2, HIGH);
-  digitalWrite(4, LOW);
-  abe = millis();
+
+  //pinMode(2, OUTPUT);
+  //pinMode(4, OUTPUT);
+  //digitalWrite(2, HIGH);
+  //digitalWrite(4, LOW);
+
+  //abe = millis();
 }
 
 void loop()
 {
-  readMagnetometer();
+  readMagnetometer(&myMagData);
+
+  delay(15);
 
   // accData(&myAccelData);
   // gyroData(&myGyroData);
   // Serial2.println();
 
+
+  /*
   if (millis() > abe + 120000)
   {
-    digitalWrite(2, HIGH);
-    digitalWrite(4, HIGH);
+    digitalWrite(2, LOW);
+    digitalWrite(4, LOW);
     while (1)
     {
       readMagnetometer();
-      if (millis() > abe + 180000)
+      if (millis() > abe + 240000)
       {
         while (1)
         {
@@ -80,4 +82,5 @@ void loop()
       }
     }
   }
+  */
 }
