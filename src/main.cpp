@@ -2,6 +2,9 @@
 #include "esp_timer.h"
 #include <math.h>
 
+//init struct for mag data
+struct MagData myMagData;
+
 //Set the desired angle (radians) and define desired X and Y koordinates
 double desiredAngle = 180*M_PI/180;
 double desiredX;
@@ -23,9 +26,8 @@ double startTime = 0;
 double currentTime;
 
 //set pins
-const int motorPin1 = 22;
-const int motorPin2 = 23;
-const int PWMPin = 21;
+const int motorDirPin = 20;
+const int PWMPin = 19;
 
 //Pwm converting values
 double Vmaks = 9;
@@ -34,9 +36,13 @@ double PWMToMotor;
 
   
 double ErrorAngleAndDirection (double desiredx, double desiredy){   
+
+//Read the magnetometer
+readMagnetometer(&myMagData); 
+
 //find the angle between the vector and the current angle   
-double sensorX = 0.4; //Sensor data!!!
-double sensorY = -0.4; //Sensor data!!!
+double sensorX = myMagData.magX; //Sensor data!!!
+double sensorY = myMagData.magY; //Sensor data!!!
 double dotproduct = desiredx*sensorX+desiredy*sensorY;
   
 double lenOfxy = sqrt(pow(sensorX,2)+pow(sensorY,2));
@@ -48,14 +54,12 @@ double crossproduct = sensorX*desiredy-sensorY*desiredx;
 
 if (crossproduct<=0)
   {
-    digitalWrite(motorPin1,LOW);
-    digitalWrite(motorPin2,HIGH);
+    digitalWrite(motorDirPin,LOW);
     Serial.println("Move the motor Counterclockwise, so the cubesat moves clockwise");
   }
   else if (crossproduct>0)
   {
-    digitalWrite(motorPin2,LOW);
-    digitalWrite(motorPin1,HIGH);
+    digitalWrite(motorDirPin,HIGH);
     Serial.println("Move the motor clockwise, so the cubesat moves counterclockwise");
   }
 
@@ -67,14 +71,15 @@ void setup() {
   // put your setup code here, to run once:
   lastError = 0;
   Serial.begin(115200);
-  pinMode(motorPin1,OUTPUT);
-  pinMode(motorPin2,OUTPUT);
+  pinMode(motorDirPin,OUTPUT);
   pinMode(PWMPin, OUTPUT);
 }
 
 
 void loop() {
   // put your main code here, to run repeatedly:
+
+
 
   //Convert the desired angle to coordinates  
   desiredX = cos(desiredAngle);
