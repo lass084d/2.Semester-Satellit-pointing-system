@@ -8,13 +8,14 @@ double desiredX;
 double desiredY;
 
 //PID-controller Constants and variables
-const u_int8_t KP = 1e-6, KI=1.3e-8, KD=9e-6;
+const u_int8_t KP = 40, KI=18, KD=2;
 
 double P, I = 0, D;
 double sensorAngle;
 double error;
 double lastError;
 double PIDOutput;
+double PIDOutput2;
 
 //Time
 double dt;
@@ -88,15 +89,31 @@ void loop() {
   dt = currentTime - startTime;
   startTime = esp_timer_get_time()*1e-6;
 
-  //calculate the PID values bassed on the error (output in voltage):
+  //calculate the PID values based on the error (output in voltage):
   P = KP * error;
   I += KI*(error*dt);
-  D = (error-lastError)/dt;
+  D = KD*((error-lastError)/dt);
 
   //Convert voltage to pwm
   PIDOutput = P+I+D;
-  PWMToMotor =PIDOutput/Vmaks*PWMmaks;
+
+  if(PIDOutput > Vmaks){
+    PIDOutput2 = Vmaks;
+  }
+  else{
+    PIDOutput2 = PIDOutput;
+  }
+
+  if(PIDOutput != PIDOutput2 && error*PIDOutput >=0){
+    I -= KI * (error * dt);
+  }
+  
+  PIDOutput2 = P+I+D;;
+
+  PWMToMotor =(PIDOutput/Vmaks)*PWMmaks;
+
   analogWrite(PWMPin,PWMToMotor);
 
   lastError = error;
 }
+
