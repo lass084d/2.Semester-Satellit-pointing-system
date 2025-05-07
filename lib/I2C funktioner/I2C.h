@@ -1,6 +1,5 @@
 #include <Arduino.h>
 #include <Wire.h>
-#include <TimeLib.h>
 
 /**
  * @brief enum used for setting the oversampling settings of the BMP280 (oversampeling sampeles multiple times and averages the result)
