@@ -19,8 +19,6 @@ struct AccelData myAccelData;
 struct GyroData myGyroData;
 struct MagData myMagData;
 
-long long abe = 0;
-
 void setup()
 {
 
