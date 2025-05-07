@@ -110,7 +110,7 @@ void loop() {
   
   PIDOutput2 = P+I+D;;
 
-  PWMToMotor =(PIDOutput/Vmaks)*PWMmaks;
+  PWMToMotor =(PIDOutput2/Vmaks)*PWMmaks;
 
   analogWrite(PWMPin,PWMToMotor);
 
