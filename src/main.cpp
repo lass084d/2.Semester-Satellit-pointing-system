@@ -15,70 +15,12 @@
  * https://www.kjmagnetics.com/magnetic-unit-converter.asp?srsltid=AfmBOopKtH_5hIZi36xgF-83J_Lwkvn93AuMc-fwOuHIk1iahbT6r5oa
  */
 
-struct AccelData myAccelData;
-struct GyroData myGyroData;
-struct MagData myMagData;
-
 void setup()
 {
 
-  pinMode(13, INPUT_PULLUP);
-  while (digitalRead(13) == HIGH)
-  {
-    // Wait for the button to be pressed
-  }
-  Serial.begin(115200); // USB Serial for PC monitoring
-  Serial2.begin(9600, SERIAL_8N1, RXD2, TXD2);
-  Wire.begin(21, 22);
-
-  scanForAdress();
-  initMPU();
-  initHMC();
-
-  Serial2.print("Time");
-  Serial2.print(",");
-  Serial2.print("X-axis");
-  Serial2.print(",");
-  Serial2.print("Y-axis");
-  Serial2.print(",");
-  Serial2.println("Z-axis");
-
-
-
-  //pinMode(2, OUTPUT);
-  //pinMode(4, OUTPUT);
-  //digitalWrite(2, HIGH);
-  //digitalWrite(4, LOW);
-
-  //abe = millis();
 }
 
 void loop()
 {
-  readMagnetometer(&myMagData);
 
-  delay(15);
-
-  // accData(&myAccelData);
-  // gyroData(&myGyroData);
-  // Serial2.println();
-
-
-  /*
-  if (millis() > abe + 120000)
-  {
-    digitalWrite(2, LOW);
-    digitalWrite(4, LOW);
-    while (1)
-    {
-      readMagnetometer();
-      if (millis() > abe + 240000)
-      {
-        while (1)
-        {
-        }
-      }
-    }
-  }
-  */
 }
