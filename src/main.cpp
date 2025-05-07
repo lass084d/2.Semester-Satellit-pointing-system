@@ -1,3 +1,4 @@
+#include <I2C.h>
 #include <Arduino.h>
 #include "esp_timer.h"
 #include <math.h>
