@@ -281,11 +281,7 @@ void gyroData(struct GyroData *GyroData)
   float gyroZ = gz_raw / 32.8;
 
   // Print gyroscope values in degrees per second
-  Serial2.print(hour());
-  Serial2.print(":");
-  Serial2.print(minute());
-  Serial2.print(":");
-  Serial2.print(second());
+
   Serial2.print("\tGyro X: ");
   Serial2.print(gyroX);
   Serial2.print(" deg/s");
@@ -342,11 +338,7 @@ void accData(struct AccelData *AccelData)
   accelZ = (accelZ * 9.82) * 0.9722772277;
 
   // Print acceleration values in g
-  Serial2.print(hour());
-  Serial2.print(":");
-  Serial2.print(minute());
-  Serial2.print(":");
-  Serial2.print(second());
+
   Serial2.print("\tAccel X: ");
   Serial2.print(accelX);
   Serial2.print(" m/s^2");
@@ -389,11 +381,6 @@ void tempData(struct AltitudeData *AltitudeData, struct trimming_parameters *tri
 
   AltitudeData->temperature = temperature;
 
-  Serial2.print(hour());
-  Serial2.print(":");
-  Serial2.print(minute());
-  Serial2.print(":");
-  Serial2.print(second());
 
   Serial2.print("\tTemperature: ");
   Serial2.print(temperature);
@@ -437,11 +424,7 @@ void preasureData(struct AltitudeData *AltitudeData, struct trimming_parameters 
 
   AltitudeData->pressure = (float)p / 256;
 
-  Serial2.print(hour());
-  Serial2.print(":");
-  Serial2.print(minute());
-  Serial2.print(":");
-  Serial2.print(second());
+
   Serial2.print("\tPressure: ");
   Serial2.print(AltitudeData->pressure);
   Serial2.println("Pa");
@@ -458,11 +441,6 @@ void readAltitude(float seaLevelhPa, struct AltitudeData *AltitudeData)
 
   AltitudeData->altitude = altitude;
 
-  Serial2.print(hour());
-  Serial2.print(":");
-  Serial2.print(minute());
-  Serial2.print(":");
-  Serial2.print(second());
   Serial2.print("\tAltitude: ");
   Serial2.print(AltitudeData->altitude);
   Serial2.println("m");
@@ -510,10 +488,7 @@ void readMagnetometer(struct MagData *MagData)
   double magZ = ((double)m_z_raw * (double)4.35) + (double)0;
 
 /*
-  Serial2.print(minute());
-  Serial2.print(":");
-  Serial2.print(second());
-  Serial2.print(":");
+
   Serial2.print(millis() % 1000);
   Serial2.print(",");
 
