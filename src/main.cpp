@@ -11,7 +11,7 @@ double desiredX;
 double desiredY;
 
 // PID-controller Constants and variables
-const double KP = 3, KI = 0, KD = 0;
+const double KP = 0.5, KI = 0, KD = 0;
 
 double P, I = 0, D;
 double sensorAngle;
@@ -89,13 +89,18 @@ double ErrorAngleAndDirection(double desiredx, double desiredy)
   // find the angle between the vector and the current angle
   double sensorX = myMagData.magX; // Sensor dataX!!!
   double sensorY = myMagData.magY; // Sensor dataY!!!
+  //double sensorX = 0;
+  //double sensorY = 5600;
+
   double dotproduct = desiredx * sensorX + desiredy * sensorY;
 
   double lenOfxy = sqrt(pow(sensorX, 2) + pow(sensorY, 2));
+
   double angle = acos(dotproduct / lenOfxy); // Formula acos((a ⋅ b)/(|a|*|b|)), but the length of the desired vector is 1
 
   // Use the crossproduct to find the direction that is the shortest
   double crossproduct = sensorX * desiredy - sensorY * desiredx;
+
 
   if (crossproduct <= 0)
   {
@@ -113,7 +118,7 @@ double ErrorAngleAndDirection(double desiredx, double desiredy)
 
 void setup()
 {
-  delay(7000); // Wait for the serial monitor to open
+  //delay(7000); // Wait for the serial monitor to open
   // put your setup code here, to run once:
   lastError = 0;
   Serial.begin(115200);
@@ -143,7 +148,7 @@ void loop()
 
   // Find the error and set the direction the motor need to spin in
   error = ErrorAngleAndDirection(desiredX, desiredY);
-  Serial.println(error, 6);
+  //Serial.println(error, 6);
 
   // calculate the PID values based on the error (output in voltage):
   P = KP * error;
@@ -171,7 +176,7 @@ void loop()
   {
     I -= KI * (error * dt);
   }
-
+  
 
   if (PIDOutput2 > 0){
     digitalWrite(motorDirPin, HIGH);
