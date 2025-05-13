@@ -109,7 +109,7 @@ void btReceiveTask(void *pvParameters) {
       }
     }
 
-    vTaskDelay(500 / portTICK_PERIOD_MS);  // mindre delay = hurtigere respons
+    vTaskDelay(500 / portTICK_PERIOD_MS);  
   }
 }
 
