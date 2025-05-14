@@ -11,7 +11,7 @@ double desiredX;
 double desiredY;
 
 // PID-controller Constants and variables
-const double KP = 0.5, KI = 0, KD = 0;
+const double KP = 0.5, KI = 0.3, KD = 0;
 
 double P, I = 0, D;
 double sensorAngle;
@@ -40,44 +40,44 @@ double PWMToMotor;
 
 void SerialKomm()
 {
-  Serial.print("tid");
-  Serial.print(";");
-  Serial.print("xakse");
-  Serial.print(";");
-  Serial.print("yakse");
-  Serial.print(";");
-  Serial.print("zakse");
-  Serial.print(";");
-  Serial.print("fejl");
-  Serial.print(";");
-  Serial.print("spendig");
-  Serial.print(";");
-  Serial.print("PWM");
-  Serial.print(";");
-  Serial.print("intigral");
-  Serial.print(";");
-  Serial.println("Deltat");
+  Serial2.print("tid");
+  Serial2.print(";");
+  Serial2.print("xakse");
+  Serial2.print(";");
+  Serial2.print("yakse");
+  Serial2.print(";");
+  Serial2.print("zakse");
+  Serial2.print(";");
+  Serial2.print("fejl");
+  Serial2.print(";");
+  Serial2.print("spendig");
+  Serial2.print(";");
+  Serial2.print("PWM");
+  Serial2.print(";");
+  Serial2.print("intigral");
+  Serial2.print(";");
+  Serial2.println("Deltat");
 }
 
 void SerialKom()
 {
-  Serial.print(millis());
-  Serial.print(";");
-  Serial.print(myMagData.magX);
-  Serial.print(";");
-  Serial.print(myMagData.magY);
-  Serial.print(";");
-  Serial.print(myMagData.magZ);
-  Serial.print(";");
-  Serial.print(error, 6);
-  Serial.print(";");
-  Serial.print(PIDOutput2, 6);
-  Serial.print(";");
-  Serial.print(PWMToMotor, 6);
-  Serial.print(";");
-  Serial.print(I,6);
-  Serial.print(";");
-  Serial.println(dt,6);
+  Serial2.print(millis());
+  Serial2.print(";");
+  Serial2.print(myMagData.magX);
+  Serial2.print(";");
+  Serial2.print(myMagData.magY);
+  Serial2.print(";");
+  Serial2.print(myMagData.magZ);
+  Serial2.print(";");
+  Serial2.print(error, 6);
+  Serial2.print(";");
+  Serial2.print(PIDOutput2, 6);
+  Serial2.print(";");
+  Serial2.print(PWMToMotor, 6);
+  Serial2.print(";");
+  Serial2.print(I,6);
+  Serial2.print(";");
+  Serial2.println(dt,6);
 }
 
 double ErrorAngleAndDirection(double desiredx, double desiredy)
@@ -186,6 +186,12 @@ void loop()
   }
 
   PWMToMotor = (abs(PIDOutput2) / Vmaks) * PWMmaks;
+  if(PWMToMotor + 259 > 4095){
+    PWMToMotor = 4095;
+  }
+  else{
+    PWMToMotor += 259;
+  }
 
   analogWrite(PWMPin, PWMToMotor);
 
