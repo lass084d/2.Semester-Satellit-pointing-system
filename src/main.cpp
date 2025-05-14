@@ -1,86 +1,163 @@
-#include <I2C.h>
 #include "esp_timer.h"
-#include <math.h>
+#include "math.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/semphr.h"
+#include "BluetoothSerial.h"
+#include <I2C.h>
 
-// init struct for mag data
-struct MagData myMagData;
+#define serial Serial.print
+#define serialln Serial.println
 
-// Set the desired angle (radians) and define desired X and Y koordinates
-double desiredAngle = 0;
-double desiredX;
-double desiredY;
+// Check if Bluetooth is available
+#if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
+#error Bluetooth is not enabled! Please run `make menuconfig` to and enable it
+#endif
 
-// PID-controller Constants and variables
-const double KP = 0.5, KI = 0, KD = 0;
+// Check Serial Port Profile
+#if !defined(CONFIG_BT_SPP_ENABLED)
+#error Serial Port Profile for Bluetooth is not available or not enabled. It is only available for the ESP32 chip.
+#endif
 
-double P, I = 0, D;
-double sensorAngle;
-double error;
-double lastError;
-double PIDOutput;
-double PIDOutput2;
-
-// Time
-double dt;
-double startTime = 0;
-double currentTime;
-
-
-double delayPeriod = 30*1e-3; //Time in microseconds (which is converted from milliseconds*/1000)
-
-
+struct PIDData {
+  // Set the desired angle (radians) and define desired X and Y koordinates
+  double desiredAngle = 0;
+  double desiredX;
+  double desiredY;
+  
+  // PID-controller Constants and variables
+  const double KP = 0.5, KI = 0.3, KD = 0;
+  
+  double P, I = 0, D;
+  double sensorAngle;
+  double error;
+  double lastError;
+  double PIDOutput;
+  double PIDOutput2;
+  
+  // Time
+  double dt;
+  double startTime = 0;
+  double currentTime;
+  
+  double delayPeriod = 30*1e-3; //Time in microseconds (which is converted from milliseconds*/1000)
+  
+  // Pwm converting values
+  double Vmaks = 9;
+  double PWMmaks = 4095;
+  double PWMToMotor;
+};
+  
 // set pins
 const int motorDirPin = 4;
 const int PWMPin = 2;
 
-// Pwm converting values
-double Vmaks = 9;
-double PWMmaks = 4095;
-double PWMToMotor;
+// opret navm og bluetooth seriel kommunikation
+String device_name = "ESD-213-esp32";
+BluetoothSerial SerialBT;
+
+// struct til kopi af data
+struct BTSendData {
+    double angle;
+    double error;
+    bool hasReceivedAngle = false;
+};
+
+void btReceiveTask(struct BTSendData *btSend, struct PIDData *pidData) {
+  //while (1) {
+    if (SerialBT.hasClient()) {
+      if (SerialBT.available()) {
+        // Læs op til newline og fjern mellemrum
+        String angleCmd = SerialBT.readStringUntil('\n');
+        angleCmd.trim();
+
+        // Konverter til double
+        double deg = angleCmd.toDouble();
+
+        // Tjek for gyldigt tal (inkl. "0")
+        if (!angleCmd.isEmpty() && (deg != 0 || angleCmd == "0")) {
+          double rad = deg * M_PI / 180.0;
+          
+          // gemmer de ønskede værdier
+          if (true /*xSemaphoreTake(dataMutex, 10 / portTICK_PERIOD_MS)*/) {
+            pidData->desiredAngle = rad;
+            btSend->hasReceivedAngle = true;
+            //xSemaphoreGive(dataMutex);
+          }
+
+          // Udskriv modtaget vinkel eller ugyldig vinkel
+          SerialBT.println("Modtaget vinkel: " + String(deg) + "° (" + String(rad, 3) + " rad)");
+          Serial.println("Modtaget vinkel: " + String(deg) + "° (" + String(rad, 3) + " rad)");
+        } else {
+          SerialBT.println("Ugyldig vinkel: '" + angleCmd + "'");
+          Serial.println("Ugyldig vinkel: '" + angleCmd + "'");
+        }
+      }
+    } 
+    else {
+      static bool once = true;
+      if (once) {
+        Serial.println("Venter på Bluetooth-forbindelse...");
+        once = false;
+      }
+    }
+
+    //vTaskDelay(500 / portTICK_PERIOD_MS);  
+  //}
+}
 
 void SerialKomm()
 {
-  Serial.print("tid");
-  Serial.print(";");
-  Serial.print("xakse");
-  Serial.print(";");
-  Serial.print("yakse");
-  Serial.print(";");
-  Serial.print("zakse");
-  Serial.print(";");
-  Serial.print("fejl");
-  Serial.print(";");
-  Serial.print("spendig");
-  Serial.print(";");
-  Serial.print("PWM");
-  Serial.print(";");
-  Serial.print("intigral");
-  Serial.print(";");
-  Serial.println("Deltat");
+  serial("tid");
+  serial(";");
+  serial("xakse");
+  serial(";");
+  serial("yakse");
+  serial(";");
+  serial("zakse");
+  serial(";");
+  serial("fejl");
+  serial(";");
+  serial("spendig");
+  serial(";");
+  serial("PWM");
+  serial(";");
+  serial("intigral");
+  serial(";");
+  serialln("Deltat");
 }
 
-void SerialKom()
+void SerialKom(struct PIDData pidData, struct MagData myMagData)
 {
-  Serial.print(millis());
-  Serial.print(";");
-  Serial.print(myMagData.magX);
-  Serial.print(";");
-  Serial.print(myMagData.magY);
-  Serial.print(";");
-  Serial.print(myMagData.magZ);
-  Serial.print(";");
-  Serial.print(error, 6);
-  Serial.print(";");
-  Serial.print(PIDOutput2, 6);
-  Serial.print(";");
-  Serial.print(PWMToMotor, 6);
-  Serial.print(";");
-  Serial.print(I,6);
-  Serial.print(";");
-  Serial.println(dt,6);
+  serial(millis());
+  serial(";");
+  serial(myMagData.magX);
+  serial(";");
+  serial(myMagData.magY);
+  serial(";");
+  serial(myMagData.magZ);
+  serial(";");
+  serial(pidData.error, 6);
+  serial(";");
+  serial(pidData.PIDOutput2, 6);
+  serial(";");
+  serial(pidData.PWMToMotor, 6);
+  serial(";");
+  serial(pidData.I,6);
+  serial(";");
+  serial(pidData.dt,6);
+  serial(";");
+  serialln(pidData.desiredAngle);
+
 }
 
-double ErrorAngleAndDirection(double desiredx, double desiredy)
+// init struct for mag data
+struct MagData myMagData;
+struct BTSendData btSend;
+struct PIDData pidData;
+
+
+double ErrorAngleAndDirection(struct PIDData pidData)
 {
 
   // Read the magnetometer
@@ -92,14 +169,14 @@ double ErrorAngleAndDirection(double desiredx, double desiredy)
   //double sensorX = 0;
   //double sensorY = 5600;
 
-  double dotproduct = desiredx * sensorX + desiredy * sensorY;
+  double dotproduct = pidData.desiredX * sensorX + pidData.desiredY * sensorY;
 
   double lenOfxy = sqrt(pow(sensorX, 2) + pow(sensorY, 2));
 
   double angle = acos(dotproduct / lenOfxy); // Formula acos((a ⋅ b)/(|a|*|b|)), but the length of the desired vector is 1
 
   // Use the crossproduct to find the direction that is the shortest
-  double crossproduct = sensorX * desiredy - sensorY * desiredx;
+  double crossproduct = sensorX * pidData.desiredY - sensorY * pidData.desiredX;
 
 
   if (crossproduct <= 0)
@@ -120,16 +197,17 @@ void setup()
 {
   //delay(7000); // Wait for the serial monitor to open
   // put your setup code here, to run once:
-  lastError = 0;
+  pidData.lastError = 0;
   Serial.begin(115200);
   Serial2.begin(9600, SERIAL_8N1, 16, 17); // Serial2 for the serial monitor
-  Wire.begin(21, 22);                      // I2C pins SDA and SCL
+  Wire.begin(21, 22);                      // SDA, SCL pins for I2C  
+  SerialBT.begin(device_name);                   
   initMPU();                               // Initialize the MPU6050
   initHMC();                               // Initialize the HMC5883L
   pinMode(motorDirPin, OUTPUT);
   pinMode(PWMPin, OUTPUT);
   SerialKomm(); // Send the header to the serial monitor
-  startTime = esp_timer_get_time() * 1e-6;
+  pidData.startTime = esp_timer_get_time() * 1e-6;
 }
 
 void loop()
@@ -137,63 +215,74 @@ void loop()
   // put your main code here, to run repeatedly:
 
   // The difference in time since last time the PID ran
-  currentTime = esp_timer_get_time() * 1e-6;
-  dt = currentTime - startTime;
-  startTime = esp_timer_get_time() * 1e-6;
+  pidData.currentTime = esp_timer_get_time() * 1e-6;
+  pidData.dt = pidData.currentTime - pidData.startTime;
+  pidData.startTime = esp_timer_get_time() * 1e-6;
 
 
   // Convert the desired angle to coordinates
-  desiredX = cos(desiredAngle);
-  desiredY = sin(desiredAngle);
+  pidData.desiredX = cos(pidData.desiredAngle);
+  pidData.desiredY = sin(pidData.desiredAngle);
 
   // Find the error and set the direction the motor need to spin in
-  error = ErrorAngleAndDirection(desiredX, desiredY);
+  pidData.error = ErrorAngleAndDirection(pidData); // Find the error and set the direction the motor need to spin in
   //Serial.println(error, 6);
 
   // calculate the PID values based on the error (output in voltage):
-  P = KP * error;
-  I += KI * (error * dt);
-  D = KD * ((error - lastError) / dt);
+  pidData.P = pidData.KP * pidData.error;
+  pidData.I += pidData.KI * (pidData.error * pidData.dt);
+  pidData.D = pidData.KD * ((pidData.error - pidData.lastError) / pidData.dt);
 
   // Convert voltage to pwm
-  PIDOutput = P+I+D;
+  pidData.PIDOutput = pidData.P+pidData.I+pidData.D;
 
 
 
-  if (PIDOutput > Vmaks)
+  if (pidData.PIDOutput > pidData.Vmaks)
   {
-    PIDOutput2 = Vmaks;
+    pidData.PIDOutput2 = pidData.Vmaks;
   }
-  else if(PIDOutput < -Vmaks){
-    PIDOutput2 = -Vmaks;
+  else if(pidData.PIDOutput < -pidData.Vmaks){
+    pidData.PIDOutput2 = -pidData.Vmaks;
   }
   else
   {
-    PIDOutput2 = PIDOutput;
+    pidData.PIDOutput2 = pidData.PIDOutput;
   }
 
-  if (PIDOutput != PIDOutput2 && error * PIDOutput >= 0)
+  if (pidData.PIDOutput != pidData.PIDOutput2 && pidData.error * pidData.PIDOutput >= 0)
   {
-    I -= KI * (error * dt);
+    pidData.I -= pidData.KI * (pidData.error * pidData.dt);
   }
   
 
-  if (PIDOutput2 > 0){
+  if (pidData.PIDOutput2 > 0){
     digitalWrite(motorDirPin, HIGH);
   }
   else{
     digitalWrite(motorDirPin, LOW);
   }
 
-  PWMToMotor = (abs(PIDOutput2) / Vmaks) * PWMmaks;
+  pidData.PWMToMotor = (abs(pidData.PIDOutput2) / pidData.Vmaks) * pidData.PWMmaks;
 
-  analogWrite(PWMPin, PWMToMotor);
+  if(pidData.PWMToMotor + 259 > pidData.PWMmaks)
+  {
+    pidData.PWMToMotor = pidData.PWMmaks;
+  }
+  else
+  {
+    pidData.PWMToMotor += 259;
+  }
 
-  lastError = error;
+  analogWrite(PWMPin, pidData.PWMToMotor);
 
-  SerialKom(); // Send the data to the serial monitor
+  pidData.lastError = pidData.error;
 
-  while (startTime + delayPeriod >= esp_timer_get_time() * 1e-6)
+  btReceiveTask(&btSend, &pidData);
+  
+  SerialKom(pidData,myMagData); // Send the data to the serial monitor
+
+  while (pidData.startTime + pidData.delayPeriod >= esp_timer_get_time() * 1e-6)
   {
     
   }
