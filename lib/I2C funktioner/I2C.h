@@ -1,6 +1,5 @@
 #include <Arduino.h>
 #include <Wire.h>
-#include <TimeLib.h>
 
 /**
  * @brief enum used for setting the oversampling settings of the BMP280 (oversampeling sampeles multiple times and averages the result)
@@ -180,15 +179,39 @@ struct GyroData
     int16_t gy_raw;
     int16_t gz_raw;
 
-    float gyroX;
-    float gyroY;
-    float gyroZ;
+    double gyroX;
+    double gyroY;
+    double gyroZ;
 };
 
-#define BMP_280_ADDRESS 0x76
-#define TEST
-#define CONVERT
+/**
+ * @brief Struct to store the magnetometer data
+ * @param mx_raw The raw x-axis magnetometer data
+ * @param my_raw The raw y-axis magnetometer data
+ * @param mz_raw The raw z-axis magnetometer data
+ * @param magX The x-axis magnetometer data converted to Gauss
+ * @param magY The y-axis magnetometer data converted to Gauss
+ * @param magZ The z-axis magnetometer data converted to Gauss
+ */
+struct MagData
+{
+    int16_t mx_raw;
+    int16_t my_raw;
+    int16_t mz_raw;
 
+    double magX;
+    double magY;
+    double magZ;
+};
+
+#define BMP_ADDRESS 0x77
+#define MPU_ADDRESS 0x68
+#define HMC_ADDRESS 0x1E
+//#define TEST
+#define CONVERT
+//#define SETTINGS
+#define RXD2 16  // RX2 pin
+#define TXD2 17  // TX2 pin
 
 /**
  * @brief Sets the sampling settings for the BMP280
@@ -202,7 +225,8 @@ void setSamplingSettings(sensor_mode mode,
                          sensor_sampling tempSampling,
                          sensor_sampling pressSampling,
                          sensor_filter filter,
-                         standby_duration duration);
+                         standby_duration duration
+);
 
 /**
  * @brief Initializes the BMP280 with the given settings
@@ -213,12 +237,13 @@ void setSamplingSettings(sensor_mode mode,
  * @param filter The IIR filtering mode to apply (if any)
  * @param duration The time btween each reading/measurement of pressure and temperature
  */
-void initBMP280(struct trimming_parameters *trimming_parameters,
+void initBMP(struct trimming_parameters *trimming_parameters,
                 sensor_mode mode,
                 sensor_sampling tempSampling,
                 sensor_sampling pressSampling,
                 sensor_filter filter,
-                standby_duration duration);
+                standby_duration duration
+);
 
 /**
  * @brief Scans the I2C bus for devices and prints the addresses of the devices found
@@ -228,7 +253,9 @@ void scanForAdress();
 /**
  * @brief Initializes the MPU6050
  */
-void initMPU6050();
+void initMPU();
+
+void initHMC();
 
 /**
  * @brief Reads the acceleration from the MPU6050 and stores it in the AccelData struct
@@ -262,3 +289,8 @@ void preasureData(struct AltitudeData *AltitudeData, struct trimming_parameters 
  *@param AltitudeData The struct to store the altitude data
  */
 void readAltitude(float seaLevelhPa, struct AltitudeData *AltitudeData);
+
+/**
+ *@brief measures the srength of the magnetic field in the x, y and z direction relativ to the sensor
+ */
+void readMagnetometer(struct MagData *MagData);

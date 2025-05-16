@@ -5,7 +5,7 @@ void scanForAdress()
   Serial.println("Scanning for I2C devices...");
 
   // Scan I2C addresses from 1 to 127
-  for (byte i = 1; i < 127; i++)
+  for (byte i = 1; i <= 127; i++)
   {
     Wire.beginTransmission(i);
     byte error = Wire.endTransmission();
@@ -31,23 +31,23 @@ void setSamplingSettings(sensor_mode mode,
                          standby_duration duration)
 {
 
-  Wire.beginTransmission(BMP_280_ADDRESS);
+  Wire.beginTransmission(BMP_ADDRESS);
   Wire.write(0xF4);                                                               // Specify register over sample and power mode
   Wire.write(((tempSampling << 5) | (pressSampling << 2) | (mode)) & 0b11111111); // Write value to register to set the settings
   Wire.endTransmission(true);                                                     // End the transmission, if set to false it will bug out and not send to the next register
   delay(100);
-  Wire.beginTransmission(BMP_280_ADDRESS);
+  Wire.beginTransmission(BMP_ADDRESS);
   Wire.write(0xF5);                                           // Specify register for iir filter and T_standby
   Wire.write(((duration << 5) | (filter << 2)) & 0b11111111); // Write value to register to set T_standby to 0.5ms and iir filter 16
   Wire.endTransmission(true);
 }
 
-void initBMP280(struct trimming_parameters *trimming_parameters,
-                sensor_mode mode,
-                sensor_sampling tempSampling,
-                sensor_sampling pressSampling,
-                sensor_filter filter,
-                standby_duration duration)
+void initBMP(struct trimming_parameters *trimming_parameters,
+             sensor_mode mode,
+             sensor_sampling tempSampling,
+             sensor_sampling pressSampling,
+             sensor_filter filter,
+             standby_duration duration)
 {
   setSamplingSettings(mode,
                       tempSampling,
@@ -69,10 +69,10 @@ void initBMP280(struct trimming_parameters *trimming_parameters,
   // Read the trimming parameters from the BMP280 and store them in the struct
   for (int i = 0; i < 12; i++)
   {
-    Wire.beginTransmission(BMP_280_ADDRESS);
+    Wire.beginTransmission(BMP_ADDRESS);
     Wire.write(registers[i]); // Send the starting register for each parameter
     Wire.endTransmission(false);
-    Wire.requestFrom(BMP_280_ADDRESS, 2, true); // Request 2 bytes
+    Wire.requestFrom(BMP_ADDRESS, 2, true); // Request 2 bytes
 
     int var1 = Wire.read();
     int var2 = Wire.read();
@@ -88,46 +88,161 @@ void initBMP280(struct trimming_parameters *trimming_parameters,
     }
   }
 
-  Wire.beginTransmission(BMP_280_ADDRESS);
-  Wire.write(0xF4);                           // Specify first register
-  Wire.endTransmission(false);                // End the transmission and initiate a new one emediatly
-  Wire.requestFrom(BMP_280_ADDRESS, 2, true); // Request 2 bytes from 0xF4 and 0xF5
-  Serial.println("BMP280 initialized");
-  Serial.println("Curent settings:");
+  Wire.beginTransmission(BMP_ADDRESS);
+  Wire.write(0xF4);                       // Specify first register
+  Wire.endTransmission(false);            // End the transmission and initiate a new one emediatly
+  Wire.requestFrom(BMP_ADDRESS, 2, true); // Request 2 bytes from 0xF4 and 0xF5
+  Serial2.println("BMP280 initialized");
+  Serial2.println("Curent settings:");
 
   int8_t settings_0xF4 = Wire.read();
   int8_t settings_0xF5 = Wire.read();
 
-  Serial.print("0xF4: ");
+  Serial2.print("0xF4: ");
   for (int i = 7; i >= 0; i--)
-  {                                         // Loop from 7 to 0 (for 8-bit binary representation)
-    Serial.print((settings_0xF4 >> i) & 1); // Shift the bits and print each bit
+  {                                          // Loop from 7 to 0 (for 8-bit binary representation)
+    Serial2.print((settings_0xF4 >> i) & 1); // Shift the bits and print each bit
   }
-  Serial.println(); // Print a new line after the binary representation
-  Serial.print("0xF5: ");
+  Serial2.println(); // Print a new line after the binary representation
+  Serial2.print("0xF5: ");
   for (int i = 7; i >= 0; i--)
-  {                                         // Loop from 7 to 0 (for 8-bit binary representation)
-    Serial.print((settings_0xF5 >> i) & 1); // Shift the bits and print each bit
+  {                                          // Loop from 7 to 0 (for 8-bit binary representation)
+    Serial2.print((settings_0xF5 >> i) & 1); // Shift the bits and print each bit
   }
-  Serial.println("\n");
+  Serial2.println("\n");
 }
 
-void initMPU6050()
+void initHMC()
 {
-  Wire.beginTransmission(0x68); // MPU6050 address
-  Wire.write(0x6B);             // Power management register
-  Wire.write(0b00000001);       // Wake up the MPU6050 and sets it to the X-axis gyroscope reference (it is recomended by the datasheet to use one of the gyroscope axies as the clock source)
+
+  uint8_t abe;
+  Wire.beginTransmission(HMC_ADDRESS); // HMC address
+  Wire.write(0x00);                    // Sets Configuration Register A
+  Wire.write(0b01111000);              // Set sample rate to 15Hz, sample size to 1 and normal measurement mode
   Wire.endTransmission(true);
-  
-  Wire.beginTransmission(0x68); // MPU6050 address 
-  Wire.write(0x1A);             // DLPF (Digital low pass filter) configuration register
-  Wire.write(0b00000100);       // Set the DLPF to 20Hz with a total delay of 16.8ms across accelerometer and gyroscope
+  delay(10);
+
+#ifdef SETTINGS
+  Wire.beginTransmission(HMC_ADDRESS);    // Re-init transmission for register read
+  Wire.write(0x00);                       // Configuration Register A
+  Wire.endTransmission(false);            // Don't release the bus to do a repeated start
+  Wire.requestFrom(HMC_ADDRESS, 1, true); // Reads settings from register A
+  abe = Wire.read();
+  Serial.println("Configuration Register A 0x00: ");
+  if (abe == 0b00010000)
+  {
+    Serial.print("sample rate set to 15Hz, sample size to 1 and normal measurement mode: ");
+    // Loop through each bit (8 bits) and print it
+  }
+  Serial.print("0b");
+  for (int i = 7; i >= 0; i--)
+  {
+    // Use bitRead to read each bit starting from the most significant bit (7)
+    Serial.print(bitRead(abe, i));
+  };
+  Serial.println("");
+#endif
+
+  Wire.beginTransmission(HMC_ADDRESS); // HMC address
+  Wire.write(0x01);                    // Sets Configuration Register B
+  Wire.write(0b11100000);              // Set the range to +-8.1Ga
+  Wire.endTransmission(true);
+  delay(10);
+
+#ifdef SETTINGS
+  Wire.beginTransmission(HMC_ADDRESS);    // Re-init transmission for register read
+  Wire.write(0x01);                       // Configuration Register B
+  Wire.endTransmission(false);            // Don't release the bus to do a repeated start
+  Wire.requestFrom(HMC_ADDRESS, 1, true); // Reads settings from register B
+  abe = Wire.read();
+  Serial.print("Configuration Register B 0x01: ");
+  Serial.println(abe);
+#endif
+
+  Wire.beginTransmission(HMC_ADDRESS); // HMC address
+  Wire.write(0x02);                    // Sets Mode Register
+  Wire.write(0b00000000);              // Set the mode to continuous measurement mode
+  Wire.endTransmission(true);
+  delay(10);
+
+#ifdef SETTINGS
+  Wire.beginTransmission(HMC_ADDRESS);    // Re-init transmission for register read
+  Wire.write(0x02);                       // Mode Register
+  Wire.endTransmission(false);            // Don't release the bus to do a repeated start
+  Wire.requestFrom(HMC_ADDRESS, 1, true); // Reads settings from mode register
+  abe = Wire.read();
+  Serial.print("Mode Register 0x02: ");
+  Serial.println(abe);
+#endif
+
+  Serial.println("HMC5883L initialized\n");
+}
+
+void initMPU()
+{
+
+#ifdef TEST
+
+  Wire.beginTransmission(MPU_ADDRESS);
+  Wire.write(0x75);
+  Wire.endTransmission(false);
+  Wire.requestFrom(MPU_ADDRESS, 1, true); // Request 1 byte from the WHO_AM_I register
+
+  Serial.println(Wire.read(), HEX); // Read the WHO_AM_I register to check if the MPU6050 is connected
+
+  delay(250);
+
+#endif
+
+  Wire.beginTransmission(MPU_ADDRESS); // MPU address
+  Wire.write(0x6B);                    // Power management register
+  Wire.write(0b10000000);              // Write a one to bit 7 reset bit; toggle reset device
+  Wire.endTransmission(true);
+  delay(500);
+
+  Wire.beginTransmission(MPU_ADDRESS); // MPU address
+  Wire.write(0x6B);                    // Power management register
+  Wire.write(0b00000000);              // Clear sleep mode bit (6), enable all sensors
+  Wire.endTransmission(true);
+  delay(250);
+
+  Wire.beginTransmission(MPU_ADDRESS); // MPU address
+  Wire.write(0x6B);                    // Power management register
+  Wire.write(0b00000001);              // sets it to the X-axis gyroscope reference (it is recomended by the datasheet to use one of the gyroscope axies as the clock source) and disable the temperature sensor
+  Wire.endTransmission(true);
+  delay(250);
+
+  Wire.beginTransmission(MPU_ADDRESS); // MPU address
+  Wire.write(0x1A);                    // DLPF (Digital low pass filter) configuration register
+  Wire.write(0b00000100);              // Set the DLPF to 20Hz with a total delay of 16.8ms across accelerometer and gyroscope
+  Wire.endTransmission(true);
+  delay(250);
+
+  Wire.beginTransmission(MPU_ADDRESS); // MPU address
+  Wire.write(0x1B);                    // Gyroscope configuration register
+  Wire.write(0b00010000);              // Set the gyroscope to full scale range of +-1000 degrees per second
+  Wire.endTransmission(true);
+  delay(250);
+
+  Wire.beginTransmission(MPU_ADDRESS); // MPU address
+  Wire.write(0x1c);                    // accelerometer configuration register
+  Wire.write(0b00000000);              // Set the accelerometer to full scale range of +-2g
   Wire.endTransmission(true);
 
-  Wire.beginTransmission(0x68); // MPU6050 address7
-  Wire.write(0x1B);             // Gyroscope configuration register
-  Wire.write(0b00000010);       // Set the gyroscope to full scale range of +/- 1000 degrees per second
+  delay(250);
+
+  Wire.beginTransmission(MPU_ADDRESS); // MPU address
+  Wire.write(0x37);                    // Interrupt configuration register
+  Wire.write(0x22);                    // Set the interrupt to active high and neabels I2C BYPASS mode
   Wire.endTransmission(true);
+
+  delay(250);
+
+  Wire.beginTransmission(MPU_ADDRESS); // MPU address
+  Wire.write(0x38);                    // Interrupt configuration register
+  Wire.write(0x01);                    // enables Data Ready interrupt, which occurs each time a write operation to all of the sensor registers has been completed.
+  Wire.endTransmission(true);
+  delay(250);
 
   Serial.println("MPU6050 initialized\n");
 };
@@ -135,10 +250,10 @@ void initMPU6050()
 void gyroData(struct GyroData *GyroData)
 {
   // Reading the gyroscope values (for example)
-  Wire.beginTransmission(0x68);
+  Wire.beginTransmission(MPU_ADDRESS);
   Wire.write(0x43); // Starting register for gyroscope data
   Wire.endTransmission(false);
-  Wire.requestFrom(0x68, 6, true); // Request 6 bytes (gyroscope data)
+  Wire.requestFrom(MPU_ADDRESS, 6, true); // Request 6 bytes (gyroscope data)
 
   // Reading the values
   int16_t gx_raw = Wire.read() << 8 | Wire.read();
@@ -147,12 +262,12 @@ void gyroData(struct GyroData *GyroData)
 
 #ifndef CONVERT
   // Print gyroscope values
-  Serial.print("raw Gyro X: ");
-  Serial.print(gx_raw);
-  Serial.print("\tY: ");
-  Serial.print(gy_raw);
-  Serial.print("\tZ: ");
-  Serial.println(gz_raw);
+  Serial2.print("raw Gyro X: ");
+  Serial2.print(gx_raw);
+  Serial2.print("\tY: ");
+  Serial2.print(gy_raw);
+  Serial2.print("\tZ: ");
+  Serial2.println(gz_raw);
 #endif
 
   GyroData->gx_raw = gx_raw;
@@ -166,20 +281,16 @@ void gyroData(struct GyroData *GyroData)
   float gyroZ = gz_raw / 32.8;
 
   // Print gyroscope values in degrees per second
-  Serial.print(hour());
-  Serial.print(":");
-  Serial.print(minute());
-  Serial.print(":");
-  Serial.print(second());
-  Serial.print("\tGyro X: ");
-  Serial.print(gyroX);
-  Serial.print(" deg/s");
-  Serial.print("\tY: ");
-  Serial.print(gyroY);
-  Serial.print(" deg/s");
-  Serial.print("\tZ: ");
-  Serial.print(gyroZ);
-  Serial.println(" deg/s");
+
+  Serial2.print("\tGyro X: ");
+  Serial2.print(gyroX);
+  Serial2.print(" deg/s");
+  Serial2.print("\tY: ");
+  Serial2.print(gyroY);
+  Serial2.print(" deg/s");
+  Serial2.print("\tZ: ");
+  Serial2.print(gyroZ);
+  Serial2.println(" deg/s");
 
   GyroData->gyroX = gyroX;
   GyroData->gyroY = gyroY;
@@ -190,10 +301,10 @@ void gyroData(struct GyroData *GyroData)
 void accData(struct AccelData *AccelData)
 {
   // Reading the accelerometer values (for example)
-  Wire.beginTransmission(0x68);
+  Wire.beginTransmission(MPU_ADDRESS);
   Wire.write(0x3B); // Starting register for accelerometer data
   Wire.endTransmission(false);
-  Wire.requestFrom(0x68, 6, true); // Request 6 bytes (acceleration data)
+  Wire.requestFrom(MPU_ADDRESS, 6, true); // Request 6 bytes (acceleration data)
 
   // Reading the values
   int16_t ax_raw = Wire.read() << 8 | Wire.read();
@@ -202,12 +313,12 @@ void accData(struct AccelData *AccelData)
 
 #ifndef CONVERT
   // Print acceleration values
-  Serial.print("raw Accel X: ");
-  Serial.print(ax_raw);
-  Serial.print("\tY: ");
-  Serial.print(ay_raw);
-  Serial.print("\tZ: ");
-  Serial.println(az_raw);
+  Serial2.print("raw Accel X: ");
+  Serial2.print(ax_raw);
+  Serial2.print("\tY: ");
+  Serial2.print(ay_raw);
+  Serial2.print("\tZ: ");
+  Serial2.println(az_raw);
 
 #endif
 
@@ -222,25 +333,21 @@ void accData(struct AccelData *AccelData)
   float accelZ = az_raw / 16384.0;
 
   // the g into m/s^2
-  accelX = accelX * 9.81;
-  accelY = accelY * 9.81;
-  accelZ = accelZ * 9.81;
+  accelX = accelX * 9.82;
+  accelY = (accelY * 9.82) * 0.9949341439;
+  accelZ = (accelZ * 9.82) * 0.9722772277;
 
   // Print acceleration values in g
-  Serial.print(hour());
-  Serial.print(":");
-  Serial.print(minute());
-  Serial.print(":");
-  Serial.print(second());
-  Serial.print("\tAccel X: ");
-  Serial.print(accelX);
-  Serial.print(" m/s^2");
-  Serial.print("\tY: ");
-  Serial.print(accelY);
-  Serial.print(" m/s^2");
-  Serial.print("\tZ: ");
-  Serial.print(accelZ);
-  Serial.println(" m/s^2");
+
+  Serial2.print("\tAccel X: ");
+  Serial2.print(accelX);
+  Serial2.print(" m/s^2");
+  Serial2.print("\tY: ");
+  Serial2.print(accelY);
+  Serial2.print(" m/s^2");
+  Serial2.print("\tZ: ");
+  Serial2.print(accelZ);
+  Serial2.println(" m/s^2");
 
   AccelData->accelX = accelX;
   AccelData->accelY = accelY;
@@ -252,10 +359,10 @@ void accData(struct AccelData *AccelData)
 void tempData(struct AltitudeData *AltitudeData, struct trimming_parameters *trimming_parameters)
 {
   // Reading the altitude values (for example)
-  Wire.beginTransmission(BMP_280_ADDRESS);
+  Wire.beginTransmission(BMP_ADDRESS);
   Wire.write(0xFA); // Starting register for altitude data
   Wire.endTransmission(false);
-  Wire.requestFrom(BMP_280_ADDRESS, 3, true); // Request 3 bytes (altitude data)
+  Wire.requestFrom(BMP_ADDRESS, 3, true); // Request 3 bytes (altitude data)
 
   // Reading the values
   int32_t temperature_raw = (int32_t)Wire.read() << 16 | (int32_t)Wire.read() << 8 | Wire.read();
@@ -274,24 +381,19 @@ void tempData(struct AltitudeData *AltitudeData, struct trimming_parameters *tri
 
   AltitudeData->temperature = temperature;
 
-  Serial.print(hour());
-  Serial.print(":");
-  Serial.print(minute());
-  Serial.print(":");
-  Serial.print(second());
 
-  Serial.print("\tTemperature: ");
-  Serial.print(temperature);
-  Serial.println("C");
+  Serial2.print("\tTemperature: ");
+  Serial2.print(temperature);
+  Serial2.println("C");
 }
 
 void preasureData(struct AltitudeData *AltitudeData, struct trimming_parameters *trimming_parameters)
 {
   // Reading the altitude values (for example)
-  Wire.beginTransmission(BMP_280_ADDRESS);
+  Wire.beginTransmission(BMP_ADDRESS);
   Wire.write(0xF7); // Starting register for altitude data
   Wire.endTransmission(false);
-  Wire.requestFrom(BMP_280_ADDRESS, 3, true); // Request 3 bytes (altitude data)
+  Wire.requestFrom(BMP_ADDRESS, 3, true); // Request 3 bytes (altitude data)
 
   // Reading the values
   int32_t preasure_raw = (int32_t)Wire.read() << 16 | (int32_t)Wire.read() << 8 | Wire.read();
@@ -322,14 +424,10 @@ void preasureData(struct AltitudeData *AltitudeData, struct trimming_parameters 
 
   AltitudeData->pressure = (float)p / 256;
 
-  Serial.print(hour());
-  Serial.print(":");
-  Serial.print(minute());
-  Serial.print(":");
-  Serial.print(second());
-  Serial.print("\tPressure: ");
-  Serial.print(AltitudeData->pressure);
-  Serial.println("Pa");
+
+  Serial2.print("\tPressure: ");
+  Serial2.print(AltitudeData->pressure);
+  Serial2.println("Pa");
 }
 
 void readAltitude(float seaLevelhPa, struct AltitudeData *AltitudeData)
@@ -343,12 +441,81 @@ void readAltitude(float seaLevelhPa, struct AltitudeData *AltitudeData)
 
   AltitudeData->altitude = altitude;
 
-  Serial.print(hour());
-  Serial.print(":");
-  Serial.print(minute());
-  Serial.print(":");
-  Serial.print(second());
-  Serial.print("\tAltitude: ");
-  Serial.print(AltitudeData->altitude);
-  Serial.println("m");
+  Serial2.print("\tAltitude: ");
+  Serial2.print(AltitudeData->altitude);
+  Serial2.println("m");
+}
+
+void readMagnetometer(struct MagData *MagData)
+{
+  uint8_t var1;
+  uint8_t var2;
+  // Reading the magnetometer values (for example)
+  Wire.beginTransmission(HMC_ADDRESS);
+  Wire.write(0x03); // Starting register for magnetometer data
+  Wire.endTransmission(false);
+  Wire.requestFrom(HMC_ADDRESS, 6, true); // Request 6 bytes (magnetometer data)
+
+  // Reading the values
+  var1 = Wire.read();
+  var2 = Wire.read();
+  int16_t m_x_raw = var1 << 8 | var2;
+  var1 = Wire.read();
+  var2 = Wire.read();
+  int16_t m_z_raw = var1 << 8 | var2;
+  var1 = Wire.read();
+  var2 = Wire.read();
+  int16_t m_y_raw = var1 << 8 | var2;
+
+#ifndef CONVERT
+  // Print magnetometer values
+  Serial.print("raw magnometer X: ");
+  Serial.print(m_x_raw);
+  Serial.print("\tY: ");
+  Serial.print(m_y_raw);
+  Serial.print("\tZ: ");
+  Serial.println(m_z_raw);
+#endif
+/*
+ GyroData->gx_raw = gx_raw;
+ GyroData->gy_raw = gy_raw;
+ GyroData->gz_raw = gz_raw;
+*/
+#ifdef CONVERT
+  // Convert the raw values to Gauss using the sensitivity scale factor of 4.35 milliGauss per LSB
+  double magX = ((double)m_x_raw * (double)4.35) + (double)1048.5;
+  double magY = ((double)m_y_raw * (double)4.35) + (double)661;
+  double magZ = ((double)m_z_raw * (double)4.35) + (double)0;
+
+/*
+
+  Serial2.print(millis() % 1000);
+  Serial2.print(",");
+
+
+  // Serial2.print("\tMagnetometer X: ");
+  Serial2.print(magX);
+  //Serial2.print("\t");
+  //Serial.print(magX);
+  // Serial2.print(" Milli Gauss");
+  Serial2.print(",");
+
+  // Serial2.print("\tY: ");
+  Serial2.print(magY);
+  //Serial2.print("\t");
+  // Serial2.print(" Milli Gauss");
+  Serial2.print(",");
+
+  // Serial2.print("\tZ: ");
+  Serial2.println(magZ);
+  //Serial2.print(",");
+
+  //Serial2.println(" Milli Gauss");
+*/
+
+ MagData->magX = magX;
+ MagData->magY = magY;
+ MagData->magZ = magZ;
+
+#endif
 }
