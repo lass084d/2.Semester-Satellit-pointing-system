@@ -340,7 +340,7 @@ void PIDMotorTask(void *pv2)
 
       pidData.lastError = pidData.error;
     }
-    vTaskDelay(pdMS_TO_TICKS(1000));
+    vTaskDelay(pdMS_TO_TICKS(50));
   }
 }
 
@@ -425,11 +425,11 @@ void setup()
   xTaskCreatePinnedToCore(
       btSendTask,   // Task funktion
       "btSendTask", // Navn
-      8192,         // Stack størrelse (2 kB)
+      8192,         // Stack størrelse
       NULL,         // Parametre
       1,            // Prioritet
       NULL,         // Task handle
-      0             // Core 0
+      0             // Core 
   );
 
   Serial.println("5");
@@ -437,11 +437,11 @@ void setup()
   xTaskCreatePinnedToCore(
       btReceiveTask,   // Task funktion
       "btReceiveTask", // Navn
-      8192,            // Stack størrelse (2 kB)
+      8192,            // Stack størrelse
       NULL,            // Parametre
       1,               // Prioritet
       NULL,            // Task handle
-      0                // Core 0
+      0                // Core 
   );
 
   Serial.println("6");
@@ -449,11 +449,11 @@ void setup()
   xTaskCreatePinnedToCore(
       PIDMotorTask,   // Task funktion
       "PIDMotorTask", // Navn
-      8192,           // Stack størrelse (2 kB)
+      8192,           // Stack størrelse
       NULL,           // Parametre
-      10,              // Prioritet
+      1,              // Prioritet
       NULL,           // Task handle
-      1               // Core 1
+      0               // Core 
   );
   Serial.println("STARTED!");
   // Start FreeRTOS Scheduler
