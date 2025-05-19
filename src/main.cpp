@@ -160,7 +160,6 @@ void btSendTask(struct BTSendData btSend, double actualAngle, struct PIDData pid
     SerialBT.println("aktuel vinkel: " + String(actualAngle, 2) + "°");
     SerialBT.println("aktuel fejl: " + String((btSend.error * (180 / M_PI)), 2) + "°");
     SerialBT.println("PWM: " + String(pidData.PWMToMotor));
-    SerialBT.println("dt: " + String(pidData.dt, 6) + " s");
     SerialBT.println(" ");
   }
 }
@@ -266,7 +265,7 @@ void setup()
   // delay(7000); // Wait for the serial monitor to open
   pinMode(motorDirPin, OUTPUT);
   pinMode(PWMPin, OUTPUT);
-  ledcSetup(pidData.pwmChannel, 5000, pidData.resolution);
+  ledcSetup(pidData.pwmChannel, 20000, pidData.resolution);
   ledcAttachPin(PWMPin, pidData.pwmChannel);
   pidData.lastError = 0;
   Serial.begin(115200);
