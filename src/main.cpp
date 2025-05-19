@@ -24,15 +24,27 @@ struct PIDData
 {
   // Set the desired angle (radians) and define desired X and Y koordinates
   double desiredAngle = 0;
-  double desiredX;
-  double desiredY;
+  double desiredX = 0;
+  double desiredY = 0;
+  double sensorX = 0;
+  double sensorY = 0;
+
+  double dotproduct;
+
+  double lenOfxy;
+
+  double angle;
+
+  double angleTo0;
+
+  double crossproduct;
 
   // PID-controller Constants and variables
   const double KP = 5.73, KI = 2, KD = 0;
 
   double P, I = 0, D;
   double sensorAngle;
-  double error;
+  double error = 0;
   double lastError;
   double PIDOutput;
   double PIDOutput2;
@@ -55,7 +67,6 @@ struct PIDData
 // set pins
 const int motorDirPin = 4;
 const int PWMPin = 2;
-long long lastTime = 0;
 
 // opret navm og bluetooth seriel kommunikation
 String device_name = "ESD-213-esp32";
@@ -64,11 +75,11 @@ BluetoothSerial SerialBT;
 // struct til kopi af data
 struct BTSendData
 {
-  double rad;
-  double angle;
-  double error;
-  int PWMfromMotor;
-  bool started;
+  double rad = 0;
+  double angle = 0;
+  double error = 0;
+  int PWMfromMotor = 0;
+  bool started = true;
 };
 
 // Boolean to check if the program is started
@@ -86,31 +97,32 @@ struct MagData myMagData;
 struct BTSendData btSend;
 struct PIDData pidData;
 
+//RecibeTaskVariables
+double deg;
+String angleCmd;
+
 void btReceiveTask(void *pv0)
 {
   while (1)
   {
-    Serial.print("btReceiveTask: ");
-    Serial.println(millis());
-
 
     if (SerialBT.hasClient())
     {
       if (SerialBT.available())
       {
         // Læs op til newline og fjern mellemrum
-        String angleCmd = SerialBT.readStringUntil('\n');
+        angleCmd = SerialBT.readStringUntil('\n');
         angleCmd.trim();
 
         // Konverter til double
-        double deg = angleCmd.toDouble();
+        deg = angleCmd.toDouble();
 
         // Tjek for gyldigt tal (inkl. "0")
         if (!angleCmd.isEmpty() && (deg != 0 || angleCmd == "0"))
         {
           if (radBTMutex != NULL)
           {
-            if (xSemaphoreTake(radBTMutex, pdMS_TO_TICKS(10)) == pdTRUE)
+            if (xSemaphoreTake(radBTMutex, pdMS_TO_TICKS(50)) == pdTRUE)
             {
               btSend.rad = deg * M_PI / 180.0;
               // Udskriv modtaget vinkel eller ugyldig vinkel
@@ -148,7 +160,7 @@ void btReceiveTask(void *pv0)
         }
       }
     }
-    vTaskDelay(pdMS_TO_TICKS(1750));
+    vTaskDelay(pdMS_TO_TICKS(150));
   }
 }
 
@@ -156,9 +168,6 @@ void btSendTask(void *pv1)
 {
   while (1)
   {
-    Serial.print("btSendTask: ");
-    Serial.println(millis());
-
     if (SerialBT.hasClient())
     {
       if (angleBTMutex != NULL)
@@ -188,7 +197,7 @@ void btSendTask(void *pv1)
 
       SerialBT.println(" ");
     }
-    vTaskDelay(pdMS_TO_TICKS(1500));
+    vTaskDelay(pdMS_TO_TICKS(500));
   }
 }
 
@@ -196,8 +205,7 @@ void PIDMotorTask(void *pv2)
 {
   while (1)
   {
-    Serial.print("PIDmotorTask: ");
-    Serial.println(millis());
+
     // Mutex for the btsend data and check if its started or not.
     if (startedBTMutex != NULL)
     {
@@ -216,13 +224,19 @@ void PIDMotorTask(void *pv2)
     }
     if (started)
     {
-      // put your main code here, to run repeatedly:
-
       // The difference in time since last time the PID ran
       pidData.currentTime = esp_timer_get_time() * 1e-6;
       pidData.dt = pidData.currentTime - pidData.startTime;
       pidData.startTime = esp_timer_get_time() * 1e-6;
 
+      if (radBTMutex != NULL)
+      {
+        if (xSemaphoreTake(radBTMutex, 0) == pdTRUE)
+        {
+          pidData.desiredAngle = btSend.rad;
+          xSemaphoreGive(radBTMutex);
+        }
+      }
       // Convert the desired angle to coordinates
       pidData.desiredX = cos(pidData.desiredAngle);
       pidData.desiredY = sin(pidData.desiredAngle);
@@ -231,51 +245,45 @@ void PIDMotorTask(void *pv2)
       readMagnetometer(&myMagData);
 
       // Find the angle between the vector and the current angle
-      double sensorX = myMagData.magX; // Data from magnetometer dataX!!!
-      double sensorY = myMagData.magY; // Data from magnetometer dataY!!!
+      pidData.sensorX = myMagData.magX; // Data from magnetometer dataX!!!
+      pidData.sensorY = myMagData.magY; // Data from magnetometer dataY!!!
 
-      double dotproduct = pidData.desiredX * sensorX + pidData.desiredY * sensorY;
+      pidData.dotproduct = pidData.desiredX * pidData.sensorX + pidData.desiredY * pidData.sensorY;
 
-      double lenOfxy = sqrt(pow(sensorX, 2) + pow(sensorY, 2));
+      pidData.lenOfxy = sqrt(pow(pidData.sensorX, 2) + pow(pidData.sensorY, 2));
 
-      double angle = acos(dotproduct / lenOfxy); // Formula acos((a ⋅ b)/(|a|*|b|)), but the length of the desired vector is 1
-      if (radBTMutex != NULL)
-      {
-        if (xSemaphoreTake(radBTMutex, 0) == pdTRUE)
-        {
-          btSend.rad = acos(sensorX / lenOfxy);
-          xSemaphoreGive(radBTMutex);
-        }
-      }
+      pidData.angle = acos(pidData.dotproduct / pidData.lenOfxy); // Formula acos((a ⋅ b)/(|a|*|b|)), but the length of the desired vector is 1
+
+      pidData.angleTo0 = acos(pidData.sensorX / pidData.lenOfxy);
 
       // Use the crossproduct to find the direction that is the shortest
-      double crossproduct = sensorX * pidData.desiredY - sensorY * pidData.desiredX;
+      pidData.crossproduct = pidData.sensorX * pidData.desiredY - pidData.sensorY * pidData.desiredX;
       if (angleBTMutex != NULL)
       {
         if (xSemaphoreTake(angleBTMutex, 0) == pdTRUE)
         {
-          if (-sensorY > 0)
+          if (-pidData.sensorY > 0)
           {
-            btSend.angle = ((2 * M_PI) - angle) * (180 / M_PI);
+            btSend.angle = ((2 * M_PI) - pidData.angleTo0) * (180 / M_PI);
           }
           else
           {
-            btSend.angle = (angle) * (180 / M_PI);
+            btSend.angle = (pidData.angleTo0) * (180 / M_PI);
           }
           xSemaphoreGive(angleBTMutex);
         }
       }
 
-      if (crossproduct <= 0)
+      if (pidData.crossproduct <= 0)
       {
         if (errorBTMutex != NULL)
         {
           if (xSemaphoreTake(errorBTMutex, 0) == pdTRUE)
           {
-            btSend.error = angle;
+            btSend.error = pidData.angle;
             xSemaphoreGive(errorBTMutex);
           }
-          pidData.error = angle;
+          pidData.error = pidData.angle;
         }
       }
       else
@@ -284,10 +292,10 @@ void PIDMotorTask(void *pv2)
         {
           if (xSemaphoreTake(errorBTMutex, 0) == pdTRUE)
           {
-            btSend.error = -angle;
+            btSend.error = -pidData.angle;
             xSemaphoreGive(errorBTMutex);
           }
-          pidData.error = -angle;
+          pidData.error = -pidData.angle;
         }
       }
 
@@ -340,7 +348,7 @@ void PIDMotorTask(void *pv2)
 
       pidData.lastError = pidData.error;
     }
-    vTaskDelay(pdMS_TO_TICKS(50));
+    vTaskDelay(pdMS_TO_TICKS(75));
   }
 }
 
@@ -396,20 +404,19 @@ void setup()
   ledcAttachPin(PWMPin, pidData.pwmChannel);
   pidData.lastError = 0;
   Serial.begin(115200);
-  Serial.println("1");
+
   Serial2.begin(9600, SERIAL_8N1, 16, 17); // Serial2 for the serial monitor
   Wire.begin(21, 22);                      // SDA, SCL pins for I2C
   SerialBT.begin(device_name);
   initMPU(); // Initialize the MPU6050
   initHMC(); // Initialize the HMC5883L
              // SerialStartKom(); // Send the header to the serial monitor
-  Serial.println("2");
+
   radBTMutex = xSemaphoreCreateMutex();
   angleBTMutex = xSemaphoreCreateMutex();
   errorBTMutex = xSemaphoreCreateMutex();
   PWMfromMotorBTMutex = xSemaphoreCreateMutex();
   startedBTMutex = xSemaphoreCreateMutex();
-  Serial.println("3");
 
   if (startedBTMutex == NULL || PWMfromMotorBTMutex == NULL || errorBTMutex == NULL || angleBTMutex == NULL || radBTMutex == NULL)
   {
@@ -418,9 +425,6 @@ void setup()
     {
     } // Stopper programmet, hvis der er fejl
   }
-  Serial.println("4");
-
-  
 
   xTaskCreatePinnedToCore(
       btSendTask,   // Task funktion
@@ -429,37 +433,33 @@ void setup()
       NULL,         // Parametre
       1,            // Prioritet
       NULL,         // Task handle
-      0             // Core 
+      0             // Core
   );
-
-  Serial.println("5");
 
   xTaskCreatePinnedToCore(
       btReceiveTask,   // Task funktion
       "btReceiveTask", // Navn
       8192,            // Stack størrelse
       NULL,            // Parametre
-      1,               // Prioritet
+      2,               // Prioritet
       NULL,            // Task handle
-      0                // Core 
+      0                // Core
   );
-
-  Serial.println("6");
 
   xTaskCreatePinnedToCore(
       PIDMotorTask,   // Task funktion
       "PIDMotorTask", // Navn
       8192,           // Stack størrelse
       NULL,           // Parametre
-      1,              // Prioritet
+      3,              // Prioritet
       NULL,           // Task handle
-      0               // Core 
+      0               // Core
   );
-  Serial.println("STARTED!");
+
   // Start FreeRTOS Scheduler
   vTaskStartScheduler();
+  Serial.printf("Free heap: %d\n", esp_get_free_heap_size());
 }
-
 void loop()
 {
 }
