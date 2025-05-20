@@ -315,7 +315,7 @@ void loop()
 
     pidData.PWMToMotor = (abs(pidData.PIDOutput2) / pidData.Vmaks) * pidData.PWMmaks;
 
-    ledcWrite(pidData.pwmChannel, pidData.PWMToMotor); // dette fungere som analog write
+    ledcWrite(pidData.pwmChannel, pidData.PWMmaks); // dette fungere som analog write
 
     pidData.lastError = pidData.error;
 
