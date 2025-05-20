@@ -56,6 +56,7 @@ const int motorDirPin = 4;
 const int PWMPin = 2;
 long long lastTime = 0;
 bool sampling = false;
+bool started = true;
 
 // actual angle
 double actualAngle = 0;
@@ -72,8 +73,6 @@ struct BTSendData
   double error;
   bool hasReceivedAngle = false;
 };
-
-bool started = true;
 
 void btReceiveTask(struct BTSendData *btSend, struct PIDData *pidData, bool *started)
 {
