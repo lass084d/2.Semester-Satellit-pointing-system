@@ -6,7 +6,6 @@
 #include "BluetoothSerial.h"
 #include <I2C.h>
 
-
 #define serial Serial2.print
 #define serialln Serial2.println
 
@@ -56,6 +55,7 @@ struct PIDData
 const int motorDirPin = 4;
 const int PWMPin = 2;
 long long lastTime = 0;
+bool sampling = false;
 
 // actual angle
 double actualAngle = 0;
@@ -74,7 +74,6 @@ struct BTSendData
 };
 
 bool started = true;
-
 
 void btReceiveTask(struct BTSendData *btSend, struct PIDData *pidData, bool *started)
 {
@@ -100,6 +99,7 @@ void btReceiveTask(struct BTSendData *btSend, struct PIDData *pidData, bool *sta
         {
           pidData->desiredAngle = btSend->rad;
           btSend->hasReceivedAngle = true;
+          sampling = true;
           // xSemaphoreGive(dataMutex);
         }
 
@@ -116,7 +116,8 @@ void btReceiveTask(struct BTSendData *btSend, struct PIDData *pidData, bool *sta
       else if (angleCmd == "stop")
       {
         *started = false;
-        ledcWrite(pidData->pwmChannel, 0); //dette fungere som analog write;
+        ledcWrite(pidData->pwmChannel, 0); // dette fungere som analog write;
+        sampling = false;
       }
       else
       {
@@ -168,42 +169,19 @@ void SerialKomm()
 {
   serial("tid");
   serial(";");
-  serial("xakse");
-  serial(";");
-  serial("yakse");
-  serial(";");
-  serial("zakse");
-  serial(";");
   serial("fejl");
   serial(";");
-  serial("spendig");
-  serial(";");
-  serial("PWM");
-  serial(";");
-  serial("intigral");
-  serial(";");
-  serialln("Deltat");
+  serialln("Vinkel");
 }
 
 void SerialKom(struct PIDData pidData, struct MagData myMagData)
 {
+  // Converts milliseconds into minutes.
   serial(millis());
-  serial(";");
-  serial(myMagData.magX);
-  serial(";");
-  serial(myMagData.magY);
-  serial(";");
-  serial(myMagData.magZ);
   serial(";");
   serial(pidData.error, 6);
   serial(";");
-  serial(pidData.PIDOutput2, 6);
-  serial(";");
-  serial(pidData.PWMToMotor, 6);
-  serial(";");
-  serial(pidData.I, 6);
-  serial(";");
-  serial(pidData.dt, 6);
+  serial(actualAngle*(M_PI/180), 6);
   serialln("");
 }
 
@@ -259,23 +237,22 @@ double ErrorAngleAndDirection(struct PIDData pidData, double *actualAngle, struc
     return -angle;
   }
 }
-int abe = 0;
-int bitch = 0;
+
 void setup()
 {
   // delay(7000); // Wait for the serial monitor to open
   pinMode(motorDirPin, OUTPUT);
   pinMode(PWMPin, OUTPUT);
-  ledcSetup(pidData.pwmChannel, 20000, pidData.resolution);
+  ledcSetup(pidData.pwmChannel, 10000, pidData.resolution);
   ledcAttachPin(PWMPin, pidData.pwmChannel);
   pidData.lastError = 0;
   Serial.begin(115200);
   Serial2.begin(9600, SERIAL_8N1, 16, 17); // Serial2 for the serial monitor
   Wire.begin(21, 22);                      // SDA, SCL pins for I2C
   SerialBT.begin(device_name);
-  initMPU(); // Initialize the MPU6050
-  initHMC(); // Initialize the HMC5883L
-  // SerialKomm(); // Send the header to the serial monitor
+  initMPU();    // Initialize the MPU6050
+  initHMC();    // Initialize the HMC5883L
+  SerialKomm(); // Send the header to the serial monitor
   pidData.startTime = esp_timer_get_time() * 1e-6;
 }
 
@@ -338,7 +315,7 @@ void loop()
 
     pidData.PWMToMotor = (abs(pidData.PIDOutput2) / pidData.Vmaks) * pidData.PWMmaks;
 
-    ledcWrite(pidData.pwmChannel, pidData.PWMToMotor); //dette fungere som analog write
+    ledcWrite(pidData.pwmChannel, pidData.PWMToMotor); // dette fungere som analog write
 
     pidData.lastError = pidData.error;
 
@@ -349,7 +326,10 @@ void loop()
       lastTime = millis();
       btSendTask(btSend, actualAngle, pidData); // Send the data to the bluetooth monitor
     }
-    // SerialKom(pidData, myMagData); // Send the data to the serial monitor
+    if (sampling)
+    {
+      SerialKom(pidData, myMagData); // Send the data to the serial monitor
+    }
 
     while (pidData.startTime + pidData.delayPeriod >= esp_timer_get_time() * 1e-6)
     {
