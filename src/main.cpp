@@ -22,7 +22,7 @@
 struct PIDData
 {
   // Set the desired angle (radians) and define desired X and Y koordinates
-  double desiredAngle = 0;
+  double desiredAngle = 180;
   double desiredX;
   double desiredY;
 
@@ -56,6 +56,7 @@ const int motorDirPin = 4;
 const int PWMPin = 2;
 long long lastTime = 0;
 bool sampling = false;
+bool started = false;
 
 // actual angle
 double actualAngle = 0;
@@ -72,8 +73,6 @@ struct BTSendData
   double error;
   bool hasReceivedAngle = false;
 };
-
-bool started = true;
 
 void btReceiveTask(struct BTSendData *btSend, struct PIDData *pidData, bool *started)
 {
@@ -112,6 +111,7 @@ void btReceiveTask(struct BTSendData *btSend, struct PIDData *pidData, bool *sta
         *started = true;
         pidData->startTime = esp_timer_get_time() * 1e-6;
         pidData->I = 0;
+        sampling = true;
       }
       else if (angleCmd == "stop")
       {
